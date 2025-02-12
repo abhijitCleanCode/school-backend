@@ -44,6 +44,32 @@ export const REGISTER_TEACHER = async (req, res) => {
   }
 };
 
+// fetch the teacher details along with the classes and subject assigned to them
+export const GET_TEACHER_BY_ID = async (req, res) => {
+  const { teacherId } = req.params; // Get the teacher ID from the request parameters
+
+  try {
+    // Find the teacher by ID and populate the assignedClasses field
+    const teacher = await Teacher.findById(teacherId)
+      .populate("assignedClasses") // Populate the referenced Class documents
+      .select("-password"); // Exclude the password field
+
+    // If teacher not found, return 404
+    if (!teacher) {
+      return res.status(404).json({ message: "Teacher not found" });
+    }
+
+    // Respond with the teacher and their assigned classes
+    res.status(200).json({
+      message: "Teacher details retrieved successfully",
+      teacher,
+    });
+  } catch (error) {
+    console.error("Error fetching teacher details:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export const ASSIGN_CLASSES_TO_TEACHER = async (req, res) => {
   const { teacherId } = req.params; // Get the teacher ID from the request parameters
   const { classIds } = req.body; // Array of class IDs to assign to the teacher
@@ -84,28 +110,85 @@ export const ASSIGN_CLASSES_TO_TEACHER = async (req, res) => {
   }
 };
 
-// fetch the teacher details along with the classes and subject assigned to them
-export const GET_TEACHER_BY_ID = async (req, res) => {
+export const ASSIGN_SUBJECT_TO_TEACHER = async (req, res) => {
   const { teacherId } = req.params; // Get the teacher ID from the request parameters
+  const { subjectIds } = req.body; // Array of subject IDs to assign to the teacher
 
   try {
-    // Find the teacher by ID and populate the assignedClasses field
-    const teacher = await Teacher.findById(teacherId)
-      .populate("assignedClasses") // Populate the referenced Class documents
-      .select("-password"); // Exclude the password field
-
-    // If teacher not found, return 404
+    // Find the teacher by ID
+    const teacher = await Teacher.findById(teacherId);
     if (!teacher) {
       return res.status(404).json({ message: "Teacher not found" });
     }
 
-    // Respond with the teacher and their assigned classes
+    // Validate the subject IDs
+    const subjectsExist = await Subject.find({ _id: { $in: subjectIds } });
+    if (subjectsExist.length !== subjectIds.length) {
+      return res
+        .status(400)
+        .json({ message: "One or more subject IDs are invalid" });
+    }
+
+    // Add new subject IDs to the existing assignedSubjects array (avoid duplicates)
+    const updatedSubjectIds = [
+      ...new Set([...teacher.assignedSubjects, ...subjectIds]),
+    ];
+
+    // Update the teacher's assignedSubjects field
+    teacher.assignedSubjects = updatedSubjectIds;
+    await teacher.save();
+
+    // Respond with success message and updated teacher details
     res.status(200).json({
-      message: "Teacher details retrieved successfully",
-      teacher,
+      message: "Subjects assigned to teacher successfully",
+      teacher: {
+        _id: teacher._id,
+        name: teacher.name,
+        email: teacher.email,
+        subject: teacher.subject,
+        assignedClasses: teacher.assignedClasses,
+        assignedSubjects: teacher.assignedSubjects,
+      },
     });
   } catch (error) {
-    console.error("Error fetching teacher details:", error);
+    console.error("Error assigning subjects to teacher:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const DELETE_ASSIGNED_SUBJECT_CLASSES = async (req, res) => {
+  try {
+    const { teacherId } = req.params; // Get the teacher ID from the request parameters
+    const { classesToRemove, subjectsToRemove } = req.body; // Arrays of IDs
+
+    if (!Array.isArray(classesToRemove) || !Array.isArray(subjectsToRemove)) {
+      return res.status(400).json({ message: "Invalid input format." });
+    }
+
+    // Find teacher and update assigned subjects & classes
+    const updatedTeacher = await Teacher.findByIdAndUpdate(
+      teacherId,
+      {
+        $pull: {
+          assignedClasses: { $in: classesToRemove },
+          assignedSubjects: { $in: subjectsToRemove },
+        },
+      },
+      { new: true }
+    )
+      .populate("assignedSubjects", "name")
+      .populate("assignedClasses", "className");
+
+    if (!updatedTeacher) {
+      return res.status(404).json({ message: "Teacher not found" });
+    }
+
+    res.status(200).json({
+      message: "Assignments removed successfully",
+      updatedTeacher,
+    });
+  } catch (error) {
+    console.error("Error removing assignments:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };

@@ -153,4 +153,39 @@ export const GET_ALL_STUDENTS = async (req, res) => {
 // there will be a query to subject db
 export const GET_STUDENT_SUBJECT = async (req, res) => {};
 
+export const GET_STUDENT_CLASS_BY_ID = async (req, res) => {
+  const { studentId } = req.params; // Get the student ID from the request parameters
+
+  try {
+    // Find the student by ID and populate the studentClass field
+    const student = await Student.findById(studentId)
+      .populate("studentClass") // Populate the referenced Class document
+      .select("-password"); // Exclude the password field
+
+    // If student not found, return 404
+    if (!student) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    // Respond with the student and their enrolled class
+    res.status(200).json({
+      message: "Student classes retrieved successfully",
+      student: {
+        _id: student._id,
+        name: student.name,
+        email: student.email,
+        studentClass: student.studentClass, // Populated class details
+        section: student.section,
+        rollNumber: student.rollNumber,
+        grade: student.grade,
+        parentContact: student.parentContact,
+        parentName: student.parentName,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching student classes:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 // get student fee history

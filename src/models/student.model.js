@@ -10,6 +10,7 @@ const studentSchema = new Schema(
     section: { type: String, required: true },
     rollNumber: { type: String, unique: true },
     grade: { type: String },
+    subjects: [{ type: Schema.Types.ObjectId, ref: "Subject" }], // List of subjects the student studies
     parentContact: { type: String, required: true },
     parentName: { type: String, required: true },
   },

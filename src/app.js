@@ -6,6 +6,7 @@ import cors from "cors";
 import studentRouter from "./routes/student.routes.js";
 import classRouter from "./routes/class.routes.js";
 import teacherRouter from "./routes/teacher.routes.js";
+import subjectRouter from "./routes/subject.routes.js";
 
 // Build express app
 const app = express();
@@ -27,5 +28,6 @@ app.use(cookieParser());
 app.use("/api/v1/student", studentRouter);
 app.use("/api/v1/class", classRouter);
 app.use("/api/v1/teacher", teacherRouter);
+app.use("/api/v1/subject", subjectRouter);
 
 export { app };

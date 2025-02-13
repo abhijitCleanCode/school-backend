@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 
 const subjectSchema = new Schema(
   {
-    name: { type: String, required: true, unique: true }, // e.g., "Mathematics", "Physics"
+    name: { type: String, required: true }, // e.g., "Mathematics", "Physics"
     class: {
       type: Schema.Types.ObjectId,
       ref: "StudentAcademicClass",

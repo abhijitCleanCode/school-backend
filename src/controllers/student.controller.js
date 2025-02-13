@@ -4,6 +4,7 @@ export const REGISTER_STUDENT = async (req, res) => {
   const {
     name,
     email,
+    password,
     studentClass,
     section,
     grade,
@@ -23,6 +24,7 @@ export const REGISTER_STUDENT = async (req, res) => {
     const newStudent = new Student({
       name,
       email,
+      password,
       studentClass,
       section,
       rollNumber,
@@ -159,7 +161,7 @@ export const GET_STUDENT_CLASS_BY_ID = async (req, res) => {
   try {
     // Find the student by ID and populate the studentClass field
     const student = await Student.findById(studentId)
-      .populate("studentClass") // Populate the referenced Class document
+      .populate("studentClass", "name") // Populate the referenced Class document
       .select("-password"); // Exclude the password field
 
     // If student not found, return 404
@@ -185,6 +187,65 @@ export const GET_STUDENT_CLASS_BY_ID = async (req, res) => {
   } catch (error) {
     console.error("Error fetching student classes:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const UPDATE_STUDENT = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const {
+      name,
+      studentClass,
+      section,
+      grade,
+      subjects,
+      parentContact,
+      parentName,
+    } = req.body;
+
+    // Validate input
+    if (
+      !name &&
+      !studentClass &&
+      !section &&
+      !grade &&
+      !subjects &&
+      !parentContact &&
+      !parentName
+    ) {
+      return res
+        .status(400)
+        .json({ message: "No valid fields provided for update." });
+    }
+
+    // Find student by ID and update the allowed fields
+    const updatedStudent = await Student.findByIdAndUpdate(
+      studentId,
+      {
+        $set: {
+          name,
+          studentClass,
+          section,
+          grade,
+          subjects,
+          parentContact,
+          parentName,
+        },
+      },
+      { new: true, runValidators: true }
+    ).populate("studentClass subjects"); // Populate references for better response
+
+    if (!updatedStudent) {
+      return res.status(404).json({ message: "Student not found." });
+    }
+
+    res.status(200).json({
+      message: "Student details updated successfully.",
+      student: updatedStudent,
+    });
+  } catch (error) {
+    console.error("Error updating student:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 

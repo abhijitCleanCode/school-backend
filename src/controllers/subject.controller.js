@@ -13,8 +13,8 @@ export const REGISTER_SUBJECT = async (req, res) => {
   } = req.body;
 
   try {
-    // Check if the subject already exists
-    const existingSubject = await Subject.findOne({ name });
+    // ensures that a document is found only when all three fields match exactly.
+    const existingSubject = await Subject.findOne({ name, classId, teacherId });
     if (existingSubject) {
       return res.status(400).json({ message: "Subject already exists" });
     }

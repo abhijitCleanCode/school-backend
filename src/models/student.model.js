@@ -8,7 +8,7 @@ const studentSchema = new Schema(
     password: { type: String, required: true },
     studentClass: { type: Schema.Types.ObjectId, ref: "Class", required: true }, // Reference to Class model
     section: { type: String, required: true },
-    rollNumber: { type: String, unique: true },
+    rollNumber: { type: String },
     grade: { type: String },
     subjects: [{ type: Schema.Types.ObjectId, ref: "Subject" }], // List of subjects the student studies
     parentContact: { type: String, required: true },

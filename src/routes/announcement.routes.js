@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { MAKE_ANNOUNCEMENT } from "../controllers/announcement.controller";
+import { MAKE_ANNOUNCEMENT } from "../controllers/announcement.controller.js";
 
 const announcementRouter = Router();
 

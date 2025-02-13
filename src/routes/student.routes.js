@@ -4,6 +4,7 @@ import {
   GET_STUDENT_BY_ID,
   GET_STUDENT_CLASS_BY_ID,
   REGISTER_STUDENT,
+  UPDATE_STUDENT,
 } from "../controllers/student.controller.js";
 const studentRouter = Router();
 
@@ -15,5 +16,6 @@ studentRouter.get("/getstudentbyid/:id", GET_STUDENT_BY_ID);
 studentRouter.get("/getallstudents", GET_ALL_STUDENTS);
 // route to get student class by id
 studentRouter.get("/:studentId/classes", GET_STUDENT_CLASS_BY_ID);
+studentRouter.put("/update-student/:studentId", UPDATE_STUDENT);
 
 export default studentRouter;

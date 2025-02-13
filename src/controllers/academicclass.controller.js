@@ -1,4 +1,7 @@
 import { StudentAcademicClass } from "../models/class.model.js";
+import { Student } from "../models/student.model.js";
+import { Subject } from "../models/subject.model.js";
+import { Teacher } from "../models/teacher.model.js";
 
 export const REGISTER_CLASS = async (req, res) => {
   const { className, section, classTeacher, students, subjects, timetable } =
@@ -9,6 +12,66 @@ export const REGISTER_CLASS = async (req, res) => {
     const existingClass = await StudentAcademicClass.findOne({ className });
     if (existingClass) {
       return res.status(400).json({ message: "Class already exists" });
+    }
+
+    // Validate the classTeacher ID
+    if (classTeacher) {
+      const teacherExists = await Teacher.findById(classTeacher);
+      if (!teacherExists) {
+        return res.status(400).json({ message: "Invalid classTeacher ID" });
+      }
+    }
+
+    // Validate the student IDs (if provided)
+    if (students && students.length > 0) {
+      const studentsExist = await Student.find({ _id: { $in: students } });
+      if (studentsExist.length !== students.length) {
+        return res
+          .status(400)
+          .json({ message: "One or more student IDs are invalid" });
+      }
+    }
+
+    // Validate the subject IDs (if provided)
+    if (subjects && subjects.length > 0) {
+      const subjectsExist = await Subject.find({ _id: { $in: subjects } });
+      if (subjectsExist.length !== subjects.length) {
+        return res
+          .status(400)
+          .json({ message: "One or more subject IDs are invalid" });
+      }
+    }
+
+    // Validate the timetable (if provided)
+    if (timetable && timetable.length > 0) {
+      for (const day of timetable) {
+        if (!day.day || !day.periods || !Array.isArray(day.periods)) {
+          return res
+            .status(400)
+            .json({ message: "Invalid timetable structure" });
+        }
+
+        for (const period of day.periods) {
+          if (
+            !period.subject ||
+            !period.teacher ||
+            !period.startTime ||
+            !period.endTime
+          ) {
+            return res
+              .status(400)
+              .json({ message: "Invalid period structure in timetable" });
+          }
+
+          // Validate the teacher ID in the timetable
+          const teacherExists = await Teacher.findById(period.teacher);
+          if (!teacherExists) {
+            return res.status(400).json({
+              message: `Invalid teacher ID in timetable: ${period.teacher}`,
+            });
+          }
+        }
+      }
     }
 
     // Create a new class

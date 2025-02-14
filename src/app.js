@@ -36,7 +36,7 @@ app.use("/api/v1/class", classRouter);
 app.use("/api/v1/teacher", teacherRouter);
 app.use("/api/v1/subject", subjectRouter);
 app.use("/api/v1/event", eventRouter);
-app.use("api/v1/announcement", announcementRouter);
+app.use("/api/v1/announcement", announcementRouter);
 app.use("/api/v1/mark", markRouter);
 
 export { app };

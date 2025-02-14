@@ -6,10 +6,6 @@ dotenv.config({
   path: "./.env",
 });
 
-app.get("/", (req, res) => {
-  res.send("Hello World");
-});
-
 connectDB()
   .then(() => {
     app.listen(process.env.PORT || 8000, () => {
@@ -19,3 +15,5 @@ connectDB()
   .catch((error) => {
     console.log("MongoDB connection failed !!! ", error);
   });
+
+export default app; // ✅ Required for Vercel deployment

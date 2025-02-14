@@ -18,7 +18,7 @@ const app = express();
 app.use(
   cors({
     //! cautions change when deploy
-    origin: process.env.CORS_ORIGIN,
+    origin: "*",
     credentials: true,
   })
 );

@@ -10,6 +10,7 @@ const teacherSchema = new Schema(
     assignedClasses: [
       { type: Schema.Types.ObjectId, ref: "StudentAcademicClass" },
     ], // Reference to Class model
+    role: { type: String, default: "teacher" },
   },
   { timestamps: true }
 );

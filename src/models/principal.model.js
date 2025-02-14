@@ -5,7 +5,8 @@ const principalSchema = new mongoose.Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    yearsOfExperience: { type: Number, required: true },
+    role: { type: String, default: "principal" },
+    yearsOfExperience: { type: Number },
   },
   { timestamps: true }
 );

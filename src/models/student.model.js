@@ -13,6 +13,7 @@ const studentSchema = new Schema(
     subjects: [{ type: Schema.Types.ObjectId, ref: "Subject" }], // List of subjects the student studies
     parentContact: { type: String, required: true },
     parentName: { type: String, required: true },
+    role: { type: String, default: "student" },
   },
   { timestamps: true }
 );

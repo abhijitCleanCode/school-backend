@@ -6,9 +6,9 @@
 
 // Student: Can only access student routes.
 
-function authorize(allowedRoles) {
+export function authorize(allowedRoles) {
   return (req, res, next) => {
-    const userRole = req.user.role;
+    const userRole = req.user.role || req.role;
 
     // Principal has access to everything
     if (userRole === "principal") {

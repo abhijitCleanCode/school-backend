@@ -1,6 +1,7 @@
 import { Teacher } from "../models/teacher.model.js";
 import { StudentAcademicClass } from "../models/class.model.js";
 import bcrypt from "bcrypt";
+import { Subject } from "../models/subject.model.js";
 
 export const REGISTER_TEACHER = async (req, res) => {
   const { name, email, password, subject, assignedClasses } = req.body;
@@ -129,13 +130,14 @@ export const ASSIGN_SUBJECT_TO_TEACHER = async (req, res) => {
         .json({ message: "One or more subject IDs are invalid" });
     }
 
+    // Ensure teacher.subject is treated as an array (initialize if undefined)
+    teacher.subject = teacher.subject || [];
+
     // Add new subject IDs to the existing assignedSubjects array (avoid duplicates)
-    const updatedSubjectIds = [
-      ...new Set([...teacher.assignedSubjects, ...subjectIds]),
-    ];
+    const updatedSubjectIds = [...new Set([...teacher.subject, ...subjectIds])];
 
     // Update the teacher's assignedSubjects field
-    teacher.assignedSubjects = updatedSubjectIds;
+    teacher.subject = updatedSubjectIds;
     await teacher.save();
 
     // Respond with success message and updated teacher details
@@ -147,7 +149,6 @@ export const ASSIGN_SUBJECT_TO_TEACHER = async (req, res) => {
         email: teacher.email,
         subject: teacher.subject,
         assignedClasses: teacher.assignedClasses,
-        assignedSubjects: teacher.assignedSubjects,
       },
     });
   } catch (error) {

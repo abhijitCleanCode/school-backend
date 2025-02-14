@@ -6,10 +6,17 @@ import {
   REGISTER_STUDENT,
   UPDATE_STUDENT,
 } from "../controllers/student.controller.js";
+import { VERIFY_TOKEN } from "../middlewares/auth.middleware.js";
+import { authorize } from "../middlewares/authorize.middleware.js";
 const studentRouter = Router();
 
 // Route for student registration
-studentRouter.post("/register", REGISTER_STUDENT);
+studentRouter.post(
+  "/register",
+  VERIFY_TOKEN,
+  authorize(["principal"]),
+  REGISTER_STUDENT
+);
 // Route for student login
 // Route for student logout
 studentRouter.get("/getstudentbyid/:id", GET_STUDENT_BY_ID);

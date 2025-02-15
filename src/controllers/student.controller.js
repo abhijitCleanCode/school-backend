@@ -1,4 +1,6 @@
 import { Student } from "../models/student.model.js";
+import { StudentAcademicClass } from "../models/class.model.js";
+import bcrypt from "bcrypt";
 
 export const REGISTER_STUDENT = async (req, res) => {
   const {
@@ -6,9 +8,8 @@ export const REGISTER_STUDENT = async (req, res) => {
     email,
     password,
     studentClass,
-    section,
-    grade,
     rollNumber,
+    grade,
     parentContact,
     parentName,
   } = req.body;
@@ -20,32 +21,46 @@ export const REGISTER_STUDENT = async (req, res) => {
       return res.status(400).json({ message: "Student already exists" });
     }
 
+    // Validate the assignedClass ID
+    const classExists = await StudentAcademicClass.findById(studentClass);
+    if (!classExists) {
+      return res.status(400).json({ message: "Invalid studentClass ID" });
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     // Create a new student
     const newStudent = new Student({
       name,
       email,
-      password,
+      password: hashedPassword,
       studentClass,
-      section,
       rollNumber,
+      grade,
       parentContact,
       parentName,
-      grade,
     });
 
     // Save the student to the database
     await newStudent.save();
 
-    // Respond with success message (exclude password in the response)
+    // Add the student's ID to the class's students array
+    classExists.students.push(newStudent._id);
+    await classExists.save();
+
+    // Respond with success message and student details (excluding password)
     res.status(201).json({
       message: "Student registered successfully",
       student: {
         _id: newStudent._id,
-        email: newStudent.email,
         name: newStudent.name,
-        grade: newStudent.grade,
+        email: newStudent.email,
+        assignedClass: newStudent.assignedClass,
         rollNumber: newStudent.rollNumber,
-        role: newStudent.role,
+        grade: newStudent.grade,
+        parentContact: newStudent.parentContact,
+        parentName: newStudent.parentName,
       },
     });
   } catch (error) {
@@ -97,25 +112,23 @@ export const LOGIN_STUDENT = async (req, res) => {
 };
 
 export const GET_STUDENT_BY_ID = async (req, res) => {
-  const { id } = req.params; // Get the student ID from the request parameters
-
   try {
-    // Find the student by ID
-    const student = await Student.findById(id).select("-password"); // Exclude the password field
+    const { studentId } = req.params;
 
-    // If student not found, return 404
+    const student = await Student.findById(studentId)
+      .populate("studentClass", "className section") // Populate class details
+      .populate("subjects", "name code"); // Populate subjects with name and code
+
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    // Return the student details
-    res.status(200).json({
-      message: "Student details retrieved successfully",
-      student,
-    });
+    res.status(200).json({ student });
   } catch (error) {
-    console.error("Error fetching student details:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
   }
 };
 
@@ -149,6 +162,29 @@ export const GET_ALL_STUDENTS = async (req, res) => {
   } catch (error) {
     console.error("Error fetching students:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const GET_STUDENT_BY_CLASS_ID = async (req, res) => {
+  try {
+    const { classId } = req.params;
+
+    const students = await Student.find({ studentClass: classId })
+      .populate("studentClass", "name") // Populate class details
+      .populate("subjects", "name code"); // Populate subjects with name and code
+
+    if (!students.length) {
+      return res
+        .status(404)
+        .json({ message: "No students found for this class" });
+    }
+
+    res.status(200).json({ students });
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
   }
 };
 

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   GET_ALL_STUDENTS,
+  GET_STUDENT_BY_CLASS_ID,
   GET_STUDENT_BY_ID,
   GET_STUDENT_CLASS_BY_ID,
   REGISTER_STUDENT,
@@ -19,8 +20,9 @@ studentRouter.post(
 );
 // Route for student login
 // Route for student logout
-studentRouter.get("/getstudentbyid/:id", GET_STUDENT_BY_ID);
+studentRouter.get("/getstudentbyid/:studentId", GET_STUDENT_BY_ID);
 studentRouter.get("/getallstudents", GET_ALL_STUDENTS);
+studentRouter.get("/getstudentbyclassid/:classId", GET_STUDENT_BY_CLASS_ID);
 // route to get student class by id
 studentRouter.get("/:studentId/classes", GET_STUDENT_CLASS_BY_ID);
 studentRouter.put("/update-student/:studentId", UPDATE_STUDENT);

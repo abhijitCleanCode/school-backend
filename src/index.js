@@ -8,10 +8,14 @@ dotenv.config({
 
 const PORT = process.env.PORT || 8000;
 
+app.get("/", (req, res) => {
+  res.send("Hello World!👋");
+});
+
 connectDB()
   .then(() => {
     app.listen(PORT, () => {
-      console.log(`✅ Server is running on port: ${PORT}`);
+      console.log(`Server is running on port: ${PORT}`);
     });
   })
   .catch((error) => {
@@ -19,4 +23,4 @@ connectDB()
     process.exit(1); // Exit process on failure
   });
 
-export default app; // ✅ Required for Vercel deployment
+export default app; // safety measure for deployment

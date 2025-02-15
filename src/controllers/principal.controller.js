@@ -54,3 +54,48 @@ export const REGISTER_PRINCIPAL = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error", error });
   }
 };
+
+export const LOGIN_PRINCIPAL = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Check if the principal exists
+    const principal = await Principal.findOne({ email });
+    if (!principal) {
+      return res.status(404).json({ message: "Principal not found" });
+    }
+
+    // Compare the provided password with the hashed password in the database
+    const isPasswordValid = await bcrypt.compare(password, principal.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid password" });
+    }
+
+    // Generate a JWT token
+    const token = jwt.sign(
+      {
+        _id: principal._id,
+        email: principal.email,
+        role: principal.role,
+      },
+      process.env.ACCESS_TOKEN_SECRET, // Secret key for signing the token
+      { expiresIn: "1h" } // Token expiration time
+    );
+
+    // Respond with the token and principal details (excluding password)
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      principal: {
+        _id: principal._id,
+        name: principal.name,
+        email: principal.email,
+        role: principal.role,
+        yearsOfExperience: principal.yearsOfExperience,
+      },
+    });
+  } catch (error) {
+    console.error("Error logging in principal:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};

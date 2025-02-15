@@ -6,8 +6,12 @@ const studentSchema = new Schema(
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    studentClass: { type: Schema.Types.ObjectId, ref: "Class", required: true }, // Reference to Class model
-    section: { type: String, required: true },
+    studentClass: {
+      type: Schema.Types.ObjectId,
+      ref: "StudentAcademicClass",
+      required: true,
+    }, // Reference to Class model
+    // section: { type: String, required: true },
     rollNumber: { type: String },
     grade: { type: String },
     subjects: [{ type: Schema.Types.ObjectId, ref: "Subject" }], // List of subjects the student studies

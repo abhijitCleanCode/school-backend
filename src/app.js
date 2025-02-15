@@ -11,6 +11,7 @@ import eventRouter from "./routes/event.routes.js";
 import announcementRouter from "./routes/announcement.routes.js";
 import markRouter from "./routes/mark.routes.js";
 import principalRouter from "./routes/principal.routes.js";
+import studentAttendanceRouter from "./routes/studentAttendance.routes.js";
 
 // Build express app
 const app = express();
@@ -38,5 +39,6 @@ app.use("/api/v1/subject", subjectRouter);
 app.use("/api/v1/event", eventRouter);
 app.use("/api/v1/announcement", announcementRouter);
 app.use("/api/v1/mark", markRouter);
+app.use("/api/v1/student-attendance", studentAttendanceRouter);
 
 export { app };

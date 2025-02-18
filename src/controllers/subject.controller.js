@@ -1,7 +1,10 @@
+import mongoose from "mongoose";
 import { Subject } from "../models/subject.model.js";
 import { Student } from "../models/student.model.js";
 import { Teacher } from "../models/teacher.model.js";
 import { StudentAcademicClass } from "../models/class.model.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { ApiError } from "../utils/ApiError.js";
 
 export const REGISTER_SUBJECT = async (req, res) => {
   const {
@@ -12,54 +15,136 @@ export const REGISTER_SUBJECT = async (req, res) => {
     syllabus,
   } = req.body;
 
+  // start a MongoDB session
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     // ensures that a document is found only when all three fields match exactly.
     const existingSubject = await Subject.findOne({ name, classId, teacherId });
     if (existingSubject) {
-      return res.status(400).json({ message: "Subject already exists" });
+      throw new ApiError(400, "Subject already exists");
     }
 
     // Validate the class ID
     const classExists = await StudentAcademicClass.findById(classId);
     if (!classExists) {
-      return res.status(400).json({ message: "Invalid class ID" });
+      throw new ApiError(400, "Class does not exists");
     }
 
     // Validate the teacher ID
     const teacherExists = await Teacher.findById(teacherId);
     if (!teacherExists) {
-      return res.status(400).json({ message: "Invalid teacher ID" });
+      throw new ApiError(400, "Teacher does not exists");
     }
 
     // Validate the student IDs (if provided)
     if (studentIds && studentIds.length > 0) {
       const studentsExist = await Student.find({ _id: { $in: studentIds } });
       if (studentsExist.length !== studentIds.length) {
-        return res
-          .status(400)
-          .json({ message: "One or more student IDs are invalid" });
+        throw new ApiError(400, "Student does not exists");
       }
     }
 
-    // Create a new subject
-    const newSubject = new Subject({
-      name,
-      class: classId,
-      teacher: teacherId,
-      students: studentIds || [], // Default to an empty array if no students are provided
-      syllabus,
-    });
+    const newSubject = await Subject.create(
+      [
+        {
+          name,
+          class: classId,
+          teacher: teacherId,
+          students: studentIds || [], // Default to an empty array if no students are provided
+          syllabus,
+        },
+      ],
+      { session }
+    );
 
-    // Save the subject to the database
-    await newSubject.save();
+    // check if subject is successfully created
+    const createdSubject = await Subject.findById(newSubject._id).session(
+      session
+    );
+    if (!createdSubject) {
+      throw new ApiError(400, "Uh oh! Subject registration failed");
+    }
 
-    // Respond with success message and subject details
-    res.status(201).json({
-      message: "Subject registered successfully",
-      subject: newSubject,
-    });
+    // Add the new subject to the corresponding class's `subjects` array
+    await StudentAcademicClass.findByIdAndUpdate(
+      classId,
+      { $addToSet: { subjects: createdSubject._id } }, // Use $addToSet to avoid duplicates
+      { session }
+    );
+
+    await Teacher.findByIdAndUpdate(
+      teacherId,
+      { $addToSet: { subjects: createdSubject._id } }, // Use $addToSet to avoid duplicates
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res
+      .status(201)
+      .json(
+        new ApiResponse(200, newSubject, "Subject Registered Successfully")
+      );
   } catch (error) {
-    console.error("Error registering subject:", error);
-    res.status(500).json({ message: "Internal server error" });
+    await session.abortTransaction();
+    session.endSession();
+
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
+
+export const GET_SUBJECT_BY_CLASS = async (req, res) => {
+  const { classId } = req.params;
+
+  try {
+    // Find subjects for the given class ID and populate references
+    const subjects = await Subject.find({ class: classId })
+      .populate("teacher", "name email") // Populate teacher details
+      .populate("students", "name rollNumber"); // Populate student details
+
+    if (!subjects || subjects.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No subjects found for this class." });
+    }
+
+    res.status(200).json(subjects);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error. Please try again later." });
+  }
+};
+
+export const GET_SUBJECT_BY_ID = async (req, res) => {
+  const { subjectId } = req.params;
+
+  try {
+    // Fetch the subject by ID and populate referenced fields
+    const subject = await Subject.findById(subjectId)
+      .populate("class", "className section") // Populate class details
+      .populate("teacher", "fullName email") // Populate teacher details
+      .populate("students", "name email"); // Populate student details
+
+    if (!subject) {
+      throw new ApiError(404, "Subject not found.");
+    }
+
+    // Return success response
+    return res
+      .status(200)
+      .json(new ApiResponse(200, subject, "Subject fetched successfully."));
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// delete subject

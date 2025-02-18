@@ -1,9 +1,10 @@
 import { Router } from "express";
 import {
   GET_ALL_STUDENTS,
+  GET_CLASS_BY_STUDENT_ID,
   GET_STUDENT_BY_CLASS_ID,
   GET_STUDENT_BY_ID,
-  GET_STUDENT_CLASS_BY_ID,
+  LOGIN_STUDENT,
   REGISTER_STUDENT,
   UPDATE_STUDENT,
 } from "../controllers/student.controller.js";
@@ -18,13 +19,13 @@ studentRouter.post(
   authorize(["principal"]),
   REGISTER_STUDENT
 );
-// Route for student login
+studentRouter.post("/login", LOGIN_STUDENT);
 // Route for student logout
 studentRouter.get("/getstudentbyid/:studentId", GET_STUDENT_BY_ID);
 studentRouter.get("/getallstudents", GET_ALL_STUDENTS);
 studentRouter.get("/getstudentbyclassid/:classId", GET_STUDENT_BY_CLASS_ID);
-// route to get student class by id
-studentRouter.get("/:studentId/classes", GET_STUDENT_CLASS_BY_ID);
+studentRouter.get("/getclassbystudentid/:studentId", GET_CLASS_BY_STUDENT_ID);
+// protected route, student must be logged in first
 studentRouter.put("/update-student/:studentId", UPDATE_STUDENT);
 
 export default studentRouter;

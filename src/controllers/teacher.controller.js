@@ -1,16 +1,45 @@
+import mongoose from "mongoose";
 import { Teacher } from "../models/teacher.model.js";
 import { StudentAcademicClass } from "../models/class.model.js";
 import bcrypt from "bcrypt";
 import { Subject } from "../models/subject.model.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { ApiError } from "../utils/ApiError.js";
 
 export const REGISTER_TEACHER = async (req, res) => {
-  const { name, email, password, subject, assignedClasses } = req.body;
+  const {
+    name,
+    email,
+    password,
+    subject: subjectIds,
+    assignedClasses: classIds,
+  } = req.body;
+
+  // Start a MongoDB session
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
     // Check if the teacher already exists
     const existingTeacher = await Teacher.findOne({ email });
     if (existingTeacher) {
-      return res.status(400).json({ message: "Teacher already exists" });
+      throw new ApiError(400, "Teacher already exists");
+    }
+
+    // Validate subject IDs
+    const subjects = await Subject.find({ _id: { $in: subjectIds } }).session(
+      session
+    );
+    if (subjects.length !== subjectIds.length) {
+      throw new ApiError(400, "One or more subjects do not exist");
+    }
+
+    // Validate class IDs
+    const classes = await StudentAcademicClass.find({
+      _id: { $in: classIds },
+    }).session(session);
+    if (classes.length !== classIds.length) {
+      throw new ApiError(400, "One or more classes do not exist");
     }
 
     // Hash the password
@@ -21,14 +50,18 @@ export const REGISTER_TEACHER = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      subject,
-      assignedClasses,
+      subject: subjectIds,
+      assignedClasses: classIds,
     });
 
-    // Save the teacher to the database
-    await newTeacher.save();
+    // Save the teacher
+    await newTeacher.save({ session });
 
-    // Respond with success message (exclude password in the response)
+    // Commit the transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    // Respond with success message (exclude password)
     res.status(201).json({
       message: "Teacher registered successfully",
       teacher: {
@@ -40,8 +73,12 @@ export const REGISTER_TEACHER = async (req, res) => {
       },
     });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error("Error registering teacher:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res
+      .status(error.code || 500)
+      .json({ message: error.message || "Internal server error" });
   }
 };
 
@@ -115,45 +152,69 @@ export const ASSIGN_SUBJECT_TO_TEACHER = async (req, res) => {
   const { teacherId } = req.params; // Get the teacher ID from the request parameters
   const { subjectIds } = req.body; // Array of subject IDs to assign to the teacher
 
+  // Start a MongoDB session
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     // Find the teacher by ID
-    const teacher = await Teacher.findById(teacherId);
+    const teacher = await Teacher.findById(teacherId).session(session);
     if (!teacher) {
-      return res.status(404).json({ message: "Teacher not found" });
+      throw new ApiError(404, "Teacher not found.");
     }
 
     // Validate the subject IDs
-    const subjectsExist = await Subject.find({ _id: { $in: subjectIds } });
+    const subjectsExist = await Subject.find({
+      _id: { $in: subjectIds },
+    }).session(session);
     if (subjectsExist.length !== subjectIds.length) {
-      return res
-        .status(400)
-        .json({ message: "One or more subject IDs are invalid" });
+      throw new ApiError(400, "One or more subject IDs are invalid.");
     }
 
     // Ensure teacher.subject is treated as an array (initialize if undefined)
     teacher.subject = teacher.subject || [];
 
-    // Add new subject IDs to the existing assignedSubjects array (avoid duplicates)
+    // Add new subject IDs to the existing subject array (avoid duplicates)
     const updatedSubjectIds = [...new Set([...teacher.subject, ...subjectIds])];
 
-    // Update the teacher's assignedSubjects field
+    // Update the teacher's subject field
     teacher.subject = updatedSubjectIds;
-    await teacher.save();
+    await teacher.save({ session });
+
+    // Update the teacher field in the Subject model for each subject
+    await Subject.updateMany(
+      { _id: { $in: subjectIds } },
+      { $addToSet: { teacher: teacherId } }, // Add teacherId to the teacher array (avoid duplicates)
+      { session }
+    );
+
+    // Commit the transaction
+    await session.commitTransaction();
+    session.endSession();
 
     // Respond with success message and updated teacher details
-    res.status(200).json({
-      message: "Subjects assigned to teacher successfully",
-      teacher: {
-        _id: teacher._id,
-        name: teacher.name,
-        email: teacher.email,
-        subject: teacher.subject,
-        assignedClasses: teacher.assignedClasses,
-      },
-    });
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          _id: teacher._id,
+          name: teacher.name,
+          email: teacher.email,
+          subject: teacher.subject,
+          assignedClasses: teacher.assignedClasses,
+        },
+        "Subjects assigned to teacher successfully."
+      )
+    );
   } catch (error) {
-    console.error("Error assigning subjects to teacher:", error);
-    res.status(500).json({ message: "Internal server error" });
+    // Abort the transaction in case of an error
+    await session.abortTransaction();
+    session.endSession();
+
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 

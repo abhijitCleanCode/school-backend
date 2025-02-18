@@ -5,7 +5,16 @@ const announcementSchema = new Schema(
   {
     title: { type: String, required: true },
     content: { type: String, required: true },
-    createdBy: { type: Schema.Types.ObjectId, ref: "Teacher", required: true }, // Teacher/Principal who created it
+    createdByTeacher: {
+      type: Schema.Types.ObjectId,
+      ref: "Teacher",
+      default: null,
+    },
+    createdByPrincipal: {
+      type: Schema.Types.ObjectId,
+      ref: "Principal",
+      default: null,
+    },
     audience: {
       type: String,
       enum: ["students", "teachers", "everyone"],

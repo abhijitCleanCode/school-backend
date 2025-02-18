@@ -41,7 +41,6 @@ export const REGISTER_STUDENT = async (req, res) => {
   session.startTransaction();
 
   try {
-    // Check if the student already exists
     const existingStudent = await Student.findOne({ email });
     if (existingStudent) {
       throw new ApiError(400, "Student already exists");
@@ -94,7 +93,7 @@ export const REGISTER_STUDENT = async (req, res) => {
     session.endSession();
 
     // Respond with success message and student details (excluding password)
-    res
+    return res
       .status(201)
       .json(
         new ApiResponse(200, createdStudent, "Student Registered Successfully")
@@ -208,7 +207,6 @@ export const GET_ALL_STUDENTS = async (req, res) => {
   const skip = (page - 1) * limit; // Calculate the number of documents to skip
 
   try {
-    // Fetch students with pagination
     const students = await Student.find()
       .populate({
         path: "studentClass",
@@ -221,7 +219,7 @@ export const GET_ALL_STUDENTS = async (req, res) => {
       .populate("subjects", "name code")
       .select("-password -refreshToken")
       .skip(skip)
-      .limit(limit); // Limit the number of documents
+      .limit(limit);
 
     // pagination metadata
     const totalStudents = await Student.countDocuments();
@@ -242,7 +240,6 @@ export const GET_ALL_STUDENTS = async (req, res) => {
       )
     );
   } catch (error) {
-    // Handle the error
     res.status(error.code || 500).json({
       success: false,
       message: error.message,
@@ -251,9 +248,9 @@ export const GET_ALL_STUDENTS = async (req, res) => {
 };
 
 export const GET_STUDENT_BY_CLASS_ID = async (req, res) => {
-  try {
-    const { classId } = req.params;
+  const { classId } = req.params;
 
+  try {
     const students = await Student.find({ studentClass: classId })
       .populate("subjects", "name code") // Populate subjects with name and code
       .select("-password -refreshToken");

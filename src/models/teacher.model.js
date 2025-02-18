@@ -9,7 +9,7 @@ const teacherSchema = new Schema(
     email: {
       type: String,
       required: [true, "Email is required while registrating a teacher"],
-      unique: [true, ""],
+      unique: [true, "Teacher must a unique email id"],
     },
     password: { type: String, required: true },
     // rename this as assignedSubjects
@@ -17,6 +17,15 @@ const teacherSchema = new Schema(
     assignedClasses: [
       { type: Schema.Types.ObjectId, ref: "StudentAcademicClass" },
     ], // Reference to Class model
+    classTeacher: { type: Schema.Types.ObjectId, ref: "StudentAcademicClass" },
+    salary: {
+      type: String,
+      required: [true, "Please assign a salary to a teacher"],
+    },
+    qualification: {
+      type: String,
+      required: [true, "Please add teacher qualification"],
+    },
     role: { type: String, default: "teacher" },
   },
   { timestamps: true }

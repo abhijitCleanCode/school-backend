@@ -209,21 +209,21 @@ export const UPDATE_CLASS = async (req, res) => {
     // Handle Class Teacher Update
     if (
       classTeacher &&
-      classTeacher !== existingClass.classTeacher.toString()
+      classTeacher !== existingClass.classTeacher?.toString()
     ) {
-      // Remove class from the old teacher's `classes` array
+      // Remove class from the old teacher's `classTeacher` field
       if (existingClass.classTeacher) {
         await Teacher.findByIdAndUpdate(
           existingClass.classTeacher,
-          { $pull: { classes: classId } },
+          { $unset: { classTeacher: "" } }, // Remove the `classTeacher` field
           { session }
         );
       }
 
-      // Add class to the new teacher's `classes` array
+      // Add class to the new teacher's `classTeacher` field
       await Teacher.findByIdAndUpdate(
         classTeacher,
-        { $addToSet: { classes: classId } },
+        { $set: { classTeacher: classId } }, // Set the `classTeacher` field
         { session }
       );
     }

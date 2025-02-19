@@ -26,11 +26,12 @@ announcementRouter.get(
   VERIFY_TOKEN,
   GET_ANNOUNCEMENT_BY_ID
 );
-announcementRouter.route(
-  "/delete-announcement",
-  VERIFY_TOKEN,
-  authorize(["principal", "teacher"]),
-  DELETE_ANNOUNCEMENT
-);
+announcementRouter
+  .route("/delete-announcement")
+  .delete(
+    VERIFY_TOKEN,
+    authorize(["principal", "teacher"]),
+    DELETE_ANNOUNCEMENT
+  );
 
 export default announcementRouter;

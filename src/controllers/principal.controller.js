@@ -90,7 +90,7 @@ export const LOGIN_PRINCIPAL = async (req, res) => {
     res.status(200).json({
       message: "Login successful",
       token,
-      principal: {
+      user: {
         _id: principal._id,
         name: principal.name,
         email: principal.email,

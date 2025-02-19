@@ -13,15 +13,15 @@ const eventRouter = Router();
 eventRouter.post(
   "/create-event",
   VERIFY_TOKEN,
-  authorize(["principal"]),
+  authorize(["principal", "teacher"]),
   CREATE_EVENT
 );
-eventRouter.get("/getallevents", GET_ALL_EVENTS);
-eventRouter.get("/:eventId", GET_EVENT_BY_ID);
+eventRouter.get("/getallevents", VERIFY_TOKEN, GET_ALL_EVENTS);
+eventRouter.get("/:eventId", VERIFY_TOKEN, GET_EVENT_BY_ID);
 eventRouter.delete(
   "/delete-events",
   VERIFY_TOKEN,
-  authorize(["principal"]),
+  authorize(["principal", "teacher"]),
   DELETE_EVENTS
 );
 

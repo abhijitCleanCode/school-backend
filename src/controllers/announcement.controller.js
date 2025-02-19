@@ -169,4 +169,58 @@ export const GET_ANNOUNCEMENT_BY_ID = async (req, res) => {
   }
 };
 
-export const DELETE_ANNOUNCEMENT = async (req, res) => {};
+export const DELETE_ANNOUNCEMENT = async (req, res) => {
+  const { announcementIds } = req.body;
+  const userId = req.user.id;
+  const role = req.user.role;
+
+  try {
+    if (
+      !announcementIds ||
+      !Array.isArray(announcementIds) ||
+      announcementIds.length === 0
+    ) {
+      throw new ApiError(400, "Invalid request. Provide a list of event api");
+    }
+
+    const announcements = await Announcement.find({
+      _id: { $in: announcementIds },
+    });
+    if (announcementIds.length === announcements.length) {
+      throw new ApiError(404, "One or more announcements not found");
+    }
+
+    for (const announcement of announcements) {
+      if (
+        role !== "principal" &&
+        announcement.createdByTeacher?.toString() !== userId &&
+        announcement.createdByPrincipal?.toString() !== userId
+      ) {
+        throw new ApiError(403, "You are not authorized to delete this event");
+      }
+    }
+
+    // delete multiple announcement
+    const deleteResult = await Announcement.deleteMany({
+      _id: { $in: announcementIds },
+    }).exec();
+    if (deleteResult.deletedCount === 0) {
+      throw new ApiError(404, "No announcement found to delete.");
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { deletedCount: deleteResult.deletedCount },
+          `${deleteResult.deletedCount} announcements deleted successfully.`
+        )
+      );
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

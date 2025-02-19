@@ -167,14 +167,31 @@ export const DELETE_EVENTS = async (req, res) => {
   const { eventIds } = req.body; // array of event IDs to be deleted
   const userId = req.user.id;
   const role = req.user.role;
+
   try {
     if (!eventIds || !Array.isArray(eventIds) || eventIds.length === 0) {
       throw new ApiError(400, "Invalid request. Provide a list of event IDs.");
     }
 
-    // Delete multiple events
-    const deleteResult = await Event.deleteMany({ _id: { $in: eventIds } });
+    const events = await Event.find({ _id: { $in: eventIds } });
+    if (events.length === eventIds.length) {
+      throw new ApiError(404, "One or more events not found");
+    }
 
+    for (const event of events) {
+      if (
+        role !== "principal" &&
+        event.createdByTeacher?.toString() !== userId &&
+        event.createdByPrincipal?.toString() !== userId
+      ) {
+        throw new ApiError(403, "You are not authorized to delete this event");
+      }
+    }
+
+    // delete multiple events
+    const deleteResult = await Event.deleteMany({
+      _id: { $in: eventIds },
+    }).exec();
     if (deleteResult.deletedCount === 0) {
       throw new ApiError(404, "No events found to delete.");
     }

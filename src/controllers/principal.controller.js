@@ -1,10 +1,12 @@
-import { Principal } from "../models/principal.model.js";
-import bcrypt from "bcrypt";
+import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import { Principal } from "../models/principal.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { StudentAcademicClass } from "../models/class.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { uploadFileOnCloudinary } from "../utils/cloudinary.utils.js";
+import { Exam } from "../models/exam.model.js";
 
 const generateTokens = (principal) => {
   const accessToken = jwt.sign(
@@ -105,8 +107,9 @@ export const LOGIN_PRINCIPAL = async (req, res) => {
 };
 
 export const UPLOAD_TIME_TABLE = async (req, res) => {
+  const { classId } = req.params;
+
   try {
-    const { classId } = req.params;
     console.log("classId: ", classId);
     console.log("req.file: ", req.file);
 
@@ -143,6 +146,95 @@ export const UPLOAD_TIME_TABLE = async (req, res) => {
           200,
           { timetableUrl, timetablePublicId },
           "Timetable uploaded and class updated successfully."
+        )
+      );
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const CREATE_EXAM = async (req, res) => {
+  const { id } = req.user;
+  const { name = "", date = "" } = req.body;
+
+  if (!id) throw new ApiError(401, "Unauthorized");
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    if ([name, date].some((field) => field.trim() === ""))
+      throw new ApiError(400, "All fields are required");
+
+    const newExam = await Exam.create(
+      [
+        {
+          name,
+          date,
+        },
+      ],
+      { session }
+    );
+
+    const createdExam = await Exam.findById(newExam[0]._id).session(session);
+    if (!createdExam) {
+      throw new ApiError(404, "Uh oh! Exam registration failed");
+    }
+
+    return res
+      .status(201)
+      .json(new ApiResponse(200, { createdExam }, "Exam created successfully"));
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const UPLOAD_EXAM_TIME_TABLE = async (req, res) => {
+  const { examId } = req.params;
+
+  try {
+    console.log("req.file: ", req.file);
+    if (!req.file) {
+      throw new ApiError(400, "Please upload a time table");
+    }
+
+    const timeTableLocalFilePath = req.file?.path;
+    if (!timeTableLocalFilePath) {
+      throw new ApiError(400, "Please upload a time table");
+    }
+
+    const timeTableCloudinaryResponse = await uploadFileOnCloudinary(
+      timeTableLocalFilePath
+    );
+
+    const timetableUrl = timeTableCloudinaryResponse.secure_url;
+    const timetablePublicId = timeTableCloudinaryResponse.public_id;
+
+    const updatedExam = await Exam.findByIdAndUpdate(
+      examId,
+      {
+        timeTable: timetableUrl,
+      },
+      { new: true }
+    );
+
+    if (!updatedExam) {
+      throw new ApiError(404, "Exam not found.");
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          { timetableUrl, timetablePublicId },
+          "Exam routine uploaded  successfully."
         )
       );
   } catch (error) {

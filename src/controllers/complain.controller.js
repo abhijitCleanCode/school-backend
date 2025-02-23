@@ -1,8 +1,8 @@
-import mongoose from "mongoose";
-import { Complain } from "../models/complain.model";
+import mongoose, { isValidObjectId } from "mongoose";
+import { Complain } from "../models/complain.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { Student } from "../models/student.model";
+import { Student } from "../models/student.model.js";
 
 // get the id of login student
 export const CREATE_COMPLAIN = async (req, res) => {
@@ -70,7 +70,6 @@ export const CREATE_COMPLAIN = async (req, res) => {
 };
 
 const isPrincipal = (req) => req.user && req.user?.role === "principal";
-
 export const GET_COMPLAINS = async (req, res) => {
   const { id: userId } = req.user;
   const page = parseInt(req.query.page) || 1;
@@ -121,4 +120,35 @@ export const GET_COMPLAINS = async (req, res) => {
   }
 };
 
-export const DELETE_COMPLAINT = async (req, res) => {};
+export const DELETE_COMPLAINT = async (req, res) => {
+  const { complaintId } = req.params;
+  if (isValidObjectId(complaintId)) {
+    throw new ApiError(400, "Invalid complain id");
+  }
+
+  try {
+    const complaint = await Complain.findById(complaintId);
+    if (!complaint) {
+      throw new ApiError(404, "Complain not found");
+    }
+
+    // Only the principal or the student who created the complaint can delete it
+    if (
+      !isPrincipal(req) &&
+      complaint.student._id.toString() !== req.user.id.toString()
+    ) {
+      throw new ApiError(403, "You are not authorized to delete this complain");
+    }
+
+    await complaint.deleteOne();
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "Complain deleted successfully"));
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

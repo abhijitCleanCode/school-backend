@@ -109,6 +109,8 @@ export const GET_ALL_TEACHERS = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const teachers = await Teacher.find()
+      .populate("assignedClasses", "className section")
+      .populate("subject", "name")
       .skip(skip)
       .limit(limit)
       .select("-password -refreshToken");

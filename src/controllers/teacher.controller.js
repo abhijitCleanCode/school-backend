@@ -29,19 +29,23 @@ export const REGISTER_TEACHER = async (req, res) => {
     }
 
     // Validate subject IDs
-    const subjects = await Subject.find({ _id: { $in: subjectIds } }).session(
-      session
-    );
-    if (subjects?.length !== subjectIds?.length) {
-      throw new ApiError(400, "One or more subjects do not exist");
+    if (!subjectIds || subjectIds.length !== 0) {
+      const subjects = await Subject.find({ _id: { $in: subjectIds } }).session(
+        session
+      );
+      if (subjects?.length !== subjectIds?.length) {
+        throw new ApiError(400, "One or more subjects do not exist");
+      }
     }
 
     // Validate class IDs
-    const classes = await StudentAcademicClass.find({
-      _id: { $in: classIds },
-    }).session(session);
-    if (classes?.length !== classIds?.length) {
-      throw new ApiError(400, "One or more classes do not exist");
+    if (!classIds || classIds.length !== 0) {
+      const classes = await StudentAcademicClass.find({
+        _id: { $in: classIds },
+      }).session(session);
+      if (classes?.length !== classIds?.length) {
+        throw new ApiError(400, "One or more classes do not exist");
+      }
     }
 
     if (classTeacherId) {

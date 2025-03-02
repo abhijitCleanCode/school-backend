@@ -36,7 +36,7 @@ export const REGISTER_CLASS = async (req, res) => {
     if (students && students.length > 0) {
       const studentsExist = await Student.find({ _id: { $in: students } });
       if (studentsExist.length !== students.length) {
-        throw new ApiError(400, "Students does not exist"); // one or more student IDs are invalid
+        throw new ApiError(400, "One or more student IDs are invalid"); // one or more student IDs are invalid
       }
     }
 
@@ -44,7 +44,7 @@ export const REGISTER_CLASS = async (req, res) => {
     if (subjects && subjects.length > 0) {
       const subjectsExist = await Subject.find({ _id: { $in: subjects } });
       if (subjectsExist.length !== subjects.length) {
-        throw new ApiError(400, "Subjects does not exist");
+        throw new ApiError(400, "One or more subject IDs are invalid");
       }
     }
 
@@ -138,7 +138,9 @@ export const GET_ALL_CLASS = async (req, res) => {
       .populate("students", "name rollNumber")
       .populate("subjects", "name")
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean()
+      .exec();
 
     // pagination metadata
     const totalClasses = await StudentAcademicClass.countDocuments();
@@ -170,23 +172,31 @@ export const GET_CLASS_BY_ID = async (req, res) => {
   try {
     const classId = req.params.id;
 
-    // Fetch class details and populate references
     const classDetails = await StudentAcademicClass.findById(classId)
-      .populate("classTeacher", "name email") // Get teacher name & email
-      .populate("students", "name email rollNumber") // Get student details
-      .populate("subjects", "name") // Get subject names
-      .populate("timetable.periods.teacher", "name email") // Get teachers in timetable
+      .populate("classTeacher", "name email phoneNumber")
+      .populate("students", "name email rollNumber")
+      .populate("subjects", "name")
       .exec();
 
     // If class not found
     if (!classDetails) {
-      return res.status(404).json({ message: "Class not found" });
+      throw new ApiError(404, "Class not found");
     }
 
-    res.status(200).json(classDetails);
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          classDetails,
+          "Class details retrieved successfully"
+        )
+      );
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 

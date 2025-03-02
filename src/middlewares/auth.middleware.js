@@ -22,13 +22,19 @@ export const VERIFY_TOKEN = async (req, res, next) => {
     let user;
     switch (decodedToken.role) {
       case "student":
-        user = await Student.findById(decodedToken._id).select("-password");
+        user = await Student.findById(decodedToken._id).select(
+          "-password -refreshToken"
+        );
         break;
       case "teacher":
-        user = await Teacher.findById(decodedToken._id).select("-password");
+        user = await Teacher.findById(decodedToken._id).select(
+          "-password -refreshToken"
+        );
         break;
       case "principal":
-        user = await Principal.findById(decodedToken._id).select("-password");
+        user = await Principal.findById(decodedToken._id).select(
+          "-password -refreshToken"
+        );
         break;
       default:
         return res

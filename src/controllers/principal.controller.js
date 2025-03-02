@@ -221,7 +221,7 @@ export const UPLOAD_EXAM_TIME_TABLE = async (req, res) => {
       {
         timeTable: timetableUrl,
       },
-      { new: true }
+      { new: true, runValidators: false }
     );
 
     if (!updatedExam) {

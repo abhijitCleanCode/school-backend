@@ -34,7 +34,7 @@ teacherRouter.put(
   ASSIGN_SUBJECT_TO_TEACHER
 );
 teacherRouter
-  .route("/:teacherId/make-class-teacher/:classId")
+  .route("/:teacherId/make-class-teacher")
   .put(VERIFY_TOKEN, authorize(["principal"]), MAKE_CLASS_TEACHER);
 teacherRouter.delete(
   "/:teacherId/delete-assignments",

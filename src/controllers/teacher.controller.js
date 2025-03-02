@@ -12,9 +12,9 @@ export const REGISTER_TEACHER = async (req, res) => {
     email,
     phoneNumber,
     password,
-    subject: subjectIds,
-    assignedClasses: classIds,
-    classTeacher: classTeacherId,
+    subject: subjectIds = [],
+    assignedClasses: classIds = [],
+    classTeacher: classTeacherId = null,
     salary,
     qualification,
   } = req.body;

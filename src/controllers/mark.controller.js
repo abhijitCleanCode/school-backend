@@ -1,13 +1,16 @@
+import mongoose from "mongoose";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 import { Mark } from "../models/mark.model.js";
 import { Subject } from "../models/subject.model.js";
 
 // class teacher and admin
 export const ADD_MARKS = async (req, res) => {
-  const { student, exam, marks } = req.body; // marks is an array of { subject, marksObtained, maxMarks }
+  const { student, exam, studentClass, marks } = req.body; // marks is an array of { subject, marksObtained, maxMarks }
 
   try {
     // Validate the student and exam IDs (you can add more validation if needed)
-    if (!student || !exam || !marks || !Array.isArray(marks)) {
+    if (!student || !exam || !studentClass || !marks || !Array.isArray(marks)) {
       return res.status(400).json({ message: "Invalid input data" });
     }
 
@@ -39,6 +42,7 @@ export const ADD_MARKS = async (req, res) => {
         student,
         subject,
         exam,
+        class: studentClass,
         marksObtained,
         maxMarks,
       });
@@ -59,42 +63,92 @@ export const ADD_MARKS = async (req, res) => {
   }
 };
 
-// student, class teacher and admin
+// fetch student marks in all subjects for a specific exam
 export const GET_MARKS_BY_STUDENT_AND_EXAM = async (req, res) => {
   const { studentId, examId } = req.params; // Get student ID and exam ID from the request parameters
 
   try {
-    // Fetch marks for the student in all subjects for the specified exam
-    const marks = await Mark.find({ student: studentId, exam: examId })
-      .populate("subject", "name") // Populate subject details (only name)
-      .populate("exam", "name date"); // Populate exam details (name and date)
+    const marks = await Mark.find({
+      student: studentId,
+      exam: examId,
+    })
+      .populate("subject", "name")
+      .populate("exam", "name date");
 
     // If no marks are found, return a 404 response
     if (!marks || marks.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No marks found for the student in this exam" });
+      throw new ApiError(404, "Marks not found for the student and exam");
     }
 
-    // Format the response to include subject-wise marks
     const formattedMarks = marks.map((mark) => ({
-      subject: mark.subject.name, // Subject name
-      marksObtained: mark.marksObtained, // Marks obtained by the student
-      maxMarks: mark.maxMarks, // Maximum marks for the subject
+      subject: mark.subject.name,
+      marksObtained: mark.marksObtained,
+      maxMarks: mark.maxMarks,
     }));
 
-    // Respond with the formatted marks
-    res.status(200).json({
-      message: "Marks retrieved successfully",
-      exam: {
-        name: marks[0].exam.name, // Exam name
-        date: marks[0].exam.date, // Exam date
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          marks: formattedMarks,
+        },
+        "Marks retrieved successfully"
+      )
+    );
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// fetch marks by class and exam
+export const LEADERBOARD_BY_CLASS = async (req, res) => {
+  const { classId, examId } = req.body;
+
+  try {
+    const leaderboard = await Mark.aggregate([
+      { $match: { class: classId, exam: examId } }, // Filter by class and exam
+      {
+        $group: {
+          _id: "$student",
+          totalObtained: { $sum: "$marksObtained" }, // Sum of obtained marks
+          totalMax: { $sum: "$maxMarks" }, // Sum of max marks
+        },
       },
-      marks: formattedMarks,
+      {
+        $lookup: {
+          from: "students", // Reference to Student collection
+          localField: "_id",
+          foreignField: "_id",
+          as: "studentInfo",
+        },
+      },
+      { $unwind: "$studentInfo" }, // Convert array to object
+      {
+        $project: {
+          studentId: "$_id",
+          studentName: "$studentInfo.name",
+          totalObtained: 1,
+          totalMax: 1,
+          percentage: {
+            $multiply: [{ $divide: ["$totalObtained", "$totalMax"] }, 100],
+          }, // Calculate percentage
+        },
+      },
+      { $sort: { percentage: -1 } }, // Sort by percentage (descending)
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: leaderboard,
     });
   } catch (error) {
-    console.error("Error fetching marks:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 

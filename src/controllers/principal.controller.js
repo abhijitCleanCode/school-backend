@@ -244,3 +244,5 @@ export const UPLOAD_EXAM_TIME_TABLE = async (req, res) => {
     });
   }
 };
+
+export const GET_ALL_EXAMS = async (req, res) => {};

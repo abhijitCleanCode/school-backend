@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   CREATE_EXAM,
+  GET_ALL_EXAMS,
   LOGIN_PRINCIPAL,
   REGISTER_PRINCIPAL,
   UPLOAD_EXAM_TIME_TABLE,
@@ -24,5 +25,6 @@ principalRouter
     upload.single("timetable"),
     UPLOAD_EXAM_TIME_TABLE
   );
+principalRouter.route("/getallexams").get(GET_ALL_EXAMS);
 
 export default principalRouter;

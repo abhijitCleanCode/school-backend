@@ -156,45 +156,6 @@ export const UPLOAD_TIME_TABLE = async (req, res) => {
   }
 };
 
-export const CREATE_EXAM = async (req, res) => {
-  const { id } = req.user;
-  const { name = "", date = "" } = req.body;
-
-  if (!id) throw new ApiError(401, "Unauthorized");
-
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    if ([name, date].some((field) => field.trim() === ""))
-      throw new ApiError(400, "All fields are required");
-
-    const newExam = await Exam.create(
-      [
-        {
-          name,
-          date,
-        },
-      ],
-      { session }
-    );
-
-    const createdExam = await Exam.findById(newExam[0]._id).session(session);
-    if (!createdExam) {
-      throw new ApiError(404, "Uh oh! Exam registration failed");
-    }
-
-    return res
-      .status(201)
-      .json(new ApiResponse(200, { createdExam }, "Exam created successfully"));
-  } catch (error) {
-    res.status(error.code || 500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
 export const UPLOAD_EXAM_TIME_TABLE = async (req, res) => {
   const { examId } = req.params;
 
@@ -245,4 +206,61 @@ export const UPLOAD_EXAM_TIME_TABLE = async (req, res) => {
   }
 };
 
-export const GET_ALL_EXAMS = async (req, res) => {};
+export const CREATE_EXAM = async (req, res) => {
+  const { id } = req.user;
+  const { name = "", date = "" } = req.body;
+
+  if (!id) throw new ApiError(401, "Unauthorized");
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    if ([name, date].some((field) => field.trim() === ""))
+      throw new ApiError(400, "All fields are required");
+
+    const newExam = await Exam.create(
+      [
+        {
+          name,
+          date,
+        },
+      ],
+      { session }
+    );
+    const createdExam = await Exam.findById(newExam[0]._id).session(session);
+    if (!createdExam) {
+      throw new ApiError(404, "Uh oh! Exam registration failed");
+    }
+
+    await session.commitTransaction();
+
+    return res
+      .status(201)
+      .json(new ApiResponse(200, { createdExam }, "Exam created successfully"));
+  } catch (error) {
+    await session.abortTransaction();
+
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const GET_ALL_EXAMS = async (req, res) => {
+  try {
+    const exams = await Exam.find({}).sort({ createdAt: -1 });
+
+    if (!exams) {
+      throw new ApiError(404, "No exams created!");
+    }
+
+    return res.status(200).json(new ApiResponse(200, { exams }, "Exams found"));
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

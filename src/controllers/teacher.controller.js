@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 import { Teacher } from "../models/teacher.model.js";
 import { StudentAcademicClass } from "../models/class.model.js";
-import bcrypt from "bcrypt";
 import { Subject } from "../models/subject.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
+import { TeacherAttendance } from "../models/teacherAttendance.model.js";
 
 export const REGISTER_TEACHER = async (req, res) => {
   const {
@@ -399,5 +399,97 @@ export const DELETE_ASSIGNED_SUBJECT_CLASSES = async (req, res) => {
   } catch (error) {
     console.error("Error removing assignments:", error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const MARK_ATTENDANCE_BY_DATE = async (req, res) => {
+  const { date, teacher, status } = req.body;
+
+  if ([date, teacher, status].some((field) => field.trim() === ""))
+    throw new ApiError(400, "All fields are required");
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const existingAttendance = await TeacherAttendance.findOne({
+      date,
+      teacher,
+    });
+    if (existingAttendance) {
+      throw new ApiError(
+        400,
+        "Attendance for this teacher on the given date already exists."
+      );
+    }
+
+    // create a new attendance record
+    const newAttendance = await TeacherAttendance.create(
+      [
+        {
+          date,
+          teacher,
+          status,
+        },
+      ],
+      { session }
+    );
+    const createdAttendance = await TeacherAttendance.findById(
+      newAttendance[0]._id
+    ).session(session);
+    if (!createdAttendance)
+      throw new ApiError(400, "Uh oh! Teacher attendance is not marked");
+
+    await session.commitTransaction();
+
+    return res
+      .status(201)
+      .json(
+        new ApiResponse(
+          201,
+          createdAttendance,
+          "Teacher attendance marked successfully"
+        )
+      );
+  } catch (error) {
+    await session.abortTransaction();
+
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const GET_TEACHER_ATTENDANCE_HISTORY = async (req, res) => {
+  const { teacherId } = req.params;
+  const { startDate, endDate } = req.query;
+
+  try {
+    const query = { teacher: teacherId }; // build the query
+    if (startDate && endDate) {
+      query.date = { $gte: new Date(startDate), $lte: new Date(endDate) };
+    }
+
+    const attendanceHistory = await TeacherAttendance.find(query)
+      .sort({ date: 1 })
+      .populate("teacher", "name");
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          attendanceHistory,
+          "Attendance History Fetched Successfully"
+        )
+      );
+  } catch (error) {
+    await session.abortTransaction();
+
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };

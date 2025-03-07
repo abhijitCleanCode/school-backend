@@ -4,8 +4,10 @@ import {
   ASSIGN_SUBJECT_TO_TEACHER,
   DELETE_ASSIGNED_SUBJECT_CLASSES,
   GET_ALL_TEACHERS,
+  GET_TEACHER_ATTENDANCE_HISTORY,
   GET_TEACHER_BY_ID,
   MAKE_CLASS_TEACHER,
+  MARK_ATTENDANCE_BY_DATE,
   REGISTER_TEACHER,
 } from "../controllers/teacher.controller.js";
 import { VERIFY_TOKEN } from "../middlewares/auth.middleware.js";
@@ -42,5 +44,15 @@ teacherRouter.delete(
   authorize(["principal"]),
   DELETE_ASSIGNED_SUBJECT_CLASSES
 );
+teacherRouter
+  .route("/attendance/mark")
+  .post(VERIFY_TOKEN, authorize(["principal"]), MARK_ATTENDANCE_BY_DATE);
+teacherRouter
+  .route("/getattendancehistory/:teacherId")
+  .get(
+    VERIFY_TOKEN,
+    authorize(["principal", "teacher"]),
+    GET_TEACHER_ATTENDANCE_HISTORY
+  );
 
 export default teacherRouter;

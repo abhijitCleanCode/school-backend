@@ -11,9 +11,6 @@ export const REGISTER_CLASS = async (req, res) => {
   const { className, section, classTeacher, students, subjects, timetable } =
     req.body;
 
-  if (isValidMongoId(classTeacher))
-    throw new ApiError(400, "Invalid mongodb Id");
-
   const session = await mongoose.startSession();
   session.startTransaction();
 

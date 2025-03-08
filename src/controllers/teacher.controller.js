@@ -77,7 +77,7 @@ export const REGISTER_TEACHER = async (req, res) => {
       ],
       { session }
     );
-    const createdTeacher = Teacher.findById(newTeacher[0]._id)
+    const createdTeacher = await Teacher.findById(newTeacher[0]._id)
       .populate({
         path: "subject",
         select: "name",
@@ -104,7 +104,9 @@ export const REGISTER_TEACHER = async (req, res) => {
       .status(201)
       .json(new ApiResponse(201, createdTeacher, "Teacher created"));
   } catch (error) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     session.endSession();
 
     res.status(error.code || 500).json({
@@ -441,6 +443,7 @@ export const MARK_ATTENDANCE_BY_DATE = async (req, res) => {
       throw new ApiError(400, "Uh oh! Teacher attendance is not marked");
 
     await session.commitTransaction();
+    session.endSession();
 
     return res
       .status(201)
@@ -453,6 +456,7 @@ export const MARK_ATTENDANCE_BY_DATE = async (req, res) => {
       );
   } catch (error) {
     await session.abortTransaction();
+    session.endSession();
 
     res.status(error.code || 500).json({
       success: false,

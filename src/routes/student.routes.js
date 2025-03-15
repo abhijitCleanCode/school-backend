@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  GET_ALL_STUDENT_COUNT,
   GET_ALL_STUDENTS,
   GET_CLASS_BY_STUDENT_ID,
   GET_STUDENT_BY_CLASS_ID,
@@ -27,5 +28,6 @@ studentRouter.get("/getstudentbyclassid/:classId", GET_STUDENT_BY_CLASS_ID);
 studentRouter.get("/getclassbystudentid/:studentId", GET_CLASS_BY_STUDENT_ID);
 // protected route, student must be logged in first
 studentRouter.put("/update-student/:studentId", UPDATE_STUDENT);
+studentRouter.get("/getallstudentcount", GET_ALL_STUDENT_COUNT);
 
 export default studentRouter;

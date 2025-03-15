@@ -30,6 +30,11 @@ const studentSchema = new Schema(
       required: [true, "Password is required while registrating a student"],
       minlength: [6, "Password must be at least 6 characters long"],
     },
+    gender: {
+      type: String,
+      required: [true, "Gender is required while registrating a student"],
+      enum: ["male", "female", "other"],
+    },
     studentClass: {
       type: Schema.Types.ObjectId,
       ref: "StudentAcademicClass",

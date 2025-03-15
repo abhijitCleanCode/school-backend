@@ -15,7 +15,7 @@ markRouter.get(
   "/students/:studentId/exams/:examId",
   GET_MARKS_BY_STUDENT_AND_EXAM
 );
-markRouter.get("/leaderboard", LEADERBOARD_BY_CLASS);
+markRouter.get("/leaderboard/:classId", LEADERBOARD_BY_CLASS);
 markRouter.delete(
   "/delete-mark/students/:studentId/subjects/:subjectId",
   VERIFY_TOKEN,

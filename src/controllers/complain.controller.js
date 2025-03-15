@@ -8,6 +8,7 @@ import { Student } from "../models/student.model.js";
 export const CREATE_COMPLAIN = async (req, res) => {
   const { id, role } = req.user;
   const { complain = "" } = req.body;
+
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -31,18 +32,20 @@ export const CREATE_COMPLAIN = async (req, res) => {
       { session }
     );
 
-    const createdComplain = Complain.findById(newComplain[0]._id).populate({
-      path: "name",
-      select: "name studentClass",
-      pupulate: {
-        path: "studentClass",
-        name: "className section classTeacher",
-        populate: {
-          path: "classTeacher",
-          select: "name",
+    const createdComplain = await Complain.findById(newComplain[0]._id)
+      .populate({
+        path: "name",
+        select: "name studentClass",
+        pupulate: {
+          path: "studentClass",
+          name: "className section classTeacher",
+          populate: {
+            path: "classTeacher",
+            select: "name",
+          },
         },
-      },
-    });
+      })
+      .session(session);
     if (!createdComplain)
       throw new ApiError(500, "Uh oh! Complain is not created");
 
@@ -59,7 +62,9 @@ export const CREATE_COMPLAIN = async (req, res) => {
       )
     );
   } catch (error) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     session.endSession();
 
     res.status(error.code || 500).json({
@@ -122,7 +127,7 @@ export const GET_COMPLAINS = async (req, res) => {
 
 export const DELETE_COMPLAINT = async (req, res) => {
   const { complaintId } = req.params;
-  if (isValidObjectId(complaintId)) {
+  if (!isValidObjectId(complaintId)) {
     throw new ApiError(400, "Invalid complain id");
   }
 

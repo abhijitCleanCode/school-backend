@@ -2,6 +2,9 @@ import express, { urlencoded } from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
+import logger from "./utils/logger.js";
+import morgan from "morgan";
+
 // import routes
 import studentRouter from "./routes/student.routes.js";
 import classRouter from "./routes/class.routes.js";
@@ -22,6 +25,23 @@ app.use(
     //! cautions change when deploy
     origin: "*",
     credentials: true,
+  })
+);
+
+const morganFormat = ":method :url :status :response-time ms";
+app.use(
+  morgan(morganFormat, {
+    stream: {
+      write: (message) => {
+        const logObject = {
+          method: message.split(" ")[0],
+          url: message.split(" ")[1],
+          status: message.split(" ")[2],
+          responseTime: message.split(" ")[3],
+        };
+        logger.info(JSON.stringify(logObject));
+      },
+    },
   })
 );
 

@@ -5,6 +5,7 @@ import { Subject } from "../models/subject.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { TeacherAttendance } from "../models/teacherAttendance.model.js";
+import { PaymentRecord } from "../models/paymentRecord.model.js";
 
 export const REGISTER_TEACHER = async (req, res) => {
   const {
@@ -109,6 +110,18 @@ export const REGISTER_TEACHER = async (req, res) => {
     }
     session.endSession();
 
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const GET_ALL_TEACHER_COUNT = async (req, res) => {
+  try {
+    const teacherCount = await Teacher.countDocuments();
+    return res.status(200).json(new ApiResponse(200, teacherCount, "Success"));
+  } catch (error) {
     res.status(error.code || 500).json({
       success: false,
       message: error.message,
@@ -311,6 +324,97 @@ export const ASSIGN_SUBJECT_TO_TEACHER = async (req, res) => {
   }
 };
 
+export const ASSIGN_CLASSES_AND_SUBJECTS_TO_TEACHER = async (req, res) => {
+  const { teacherId } = req.params;
+  const { classIds, subjectIds } = req.body;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const teacher = await Teacher.findById(teacherId).session(session);
+    if (!teacher) {
+      throw new ApiError(404, "Teacher not found.");
+    }
+
+    // Validate class IDs
+    const classesExist = await StudentAcademicClass.find({
+      _id: { $in: classIds },
+    }).session(session);
+    if (classesExist.length !== classIds.length) {
+      throw new ApiError(400, "One or more class IDs are invalid.");
+    }
+
+    // Validate subject IDs
+    const subjectsExist = await Subject.find({
+      _id: { $in: subjectIds },
+    }).session(session);
+    if (subjectsExist.length !== subjectIds.length) {
+      throw new ApiError(400, "One or more subject IDs are invalid.");
+    }
+
+    // Assign classes to the teacher (avoid duplicates)
+    await Teacher.updateOne(
+      { _id: teacherId },
+      { $addToSet: { assignedClasses: { $each: classIds } } },
+      { session }
+    );
+
+    // Assign subjects to the teacher (avoid duplicates)
+    await Teacher.updateOne(
+      { _id: teacherId },
+      { $addToSet: { subject: { $each: subjectIds } } },
+      { session }
+    );
+
+    // Add teacher to the assigned subjects (avoid duplicates)
+    // await Subject.updateMany(
+    //   { _id: { $in: subjectIds } },
+    //   { $addToSet: { teacher: teacherId } },
+    //   { session }
+    // );
+
+    // Commit the transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    // Fetch the updated teacher details
+    const updatedTeacher = await Teacher.findById(teacherId, {
+      name: 1,
+      email: 1,
+      subject: 1,
+      assignedClasses: 1,
+    });
+
+    // Respond with success message and updated teacher details
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          updatedTeacher,
+          "Classes and subjects assigned to teacher successfully."
+        )
+      );
+  } catch (error) {
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    session.endSession();
+
+    // Ensure the error code is a valid HTTP status code
+    let statusCode = error.code || 500;
+    if (statusCode < 100 || statusCode >= 600) {
+      statusCode = 500; // Fallback to 500 if the code is invalid
+    }
+
+    res.status(statusCode).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // offers flexibility in the system
 export const MAKE_CLASS_TEACHER = async (req, res) => {
   const { teacherId } = req.params;
@@ -494,6 +598,75 @@ export const GET_TEACHER_ATTENDANCE_HISTORY = async (req, res) => {
     res.status(error.code || 500).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+//* Teacher Transaction Controllers (salary khata book)
+export const ADD_TRANSACTION = async (req, res) => {
+  const { teacher, month, status, advancePay, advanceAmount } = req.body;
+
+  try {
+    const paymentRecord = new PaymentRecord({
+      teacher,
+      month,
+      status,
+      advancePay,
+      advanceAmount,
+    });
+
+    await paymentRecord.save();
+
+    res
+      .status(201)
+      .json(
+        new ApiResponse(
+          201,
+          paymentRecord,
+          "Payment record added successfully."
+        )
+      );
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to add payment record.",
+      error: error.message,
+    });
+  }
+};
+
+export const GET_PAYMENT_RECORDS_BY_TEACHER = async (req, res) => {
+  console.log("GET_PAYMENT_RECORDS_BY_TEACHER");
+  const { teacherId } = req.params;
+  const { month, status } = req.query;
+  console.log("teacherId: ", teacherId);
+
+  try {
+    const filter = { teacher: teacherId };
+    if (month) filter.month = month;
+    if (status) filter.status = status;
+
+    console.log("filter: ", filter);
+
+    const paymentRecords = await PaymentRecord.find(filter).populate(
+      "teacher",
+      "name email"
+    );
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          paymentRecords,
+          "Payment records fetched successfully."
+        )
+      );
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch payment records.",
+      error: error.message,
     });
   }
 };

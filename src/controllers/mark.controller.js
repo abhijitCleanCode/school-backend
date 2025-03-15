@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Mark } from "../models/mark.model.js";
@@ -47,11 +47,12 @@ export const ADD_MARKS = async (req, res) => {
         maxMarks,
       });
 
-      await newMark.save().session(session);
+      await newMark.save({ session });
       createdMarks.push(newMark);
     }
 
     await session.commitTransaction();
+    session.endSession();
 
     // Respond with success message and the created mark entries
     res.status(201).json({
@@ -59,10 +60,15 @@ export const ADD_MARKS = async (req, res) => {
       marks: createdMarks,
     });
   } catch (error) {
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    session.endSession();
 
-    console.error("Error adding marks:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -108,11 +114,11 @@ export const GET_MARKS_BY_STUDENT_AND_EXAM = async (req, res) => {
 
 // fetch marks by class and exam
 export const LEADERBOARD_BY_CLASS = async (req, res) => {
-  const { classId } = req.body;
+  const { classId } = req.params;
 
   try {
     const leaderboard = await Mark.aggregate([
-      { $match: { class: classId } }, // Filter by class
+      { $match: { class: new Types.ObjectId(classId) } }, // Filter by class,  Convert classId to ObjectId
       {
         $group: {
           _id: "$student",

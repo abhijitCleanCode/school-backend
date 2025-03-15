@@ -100,7 +100,7 @@ export const REGISTER_SUBJECT = async (req, res) => {
 };
 
 export const GET_SUBJECT_BY_CLASS = async (req, res) => {
-  const { classId } = req.body;
+  const { classId } = req.params;
 
   try {
     // Find subjects for the given class ID and populate references

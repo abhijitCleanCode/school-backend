@@ -157,7 +157,6 @@ export const LOGIN_STUDENT = async (req, res) => {
         )
       );
   } catch (error) {
-    // Handle the error
     res.status(error.code || 500).json({
       success: false,
       message: error.message,
@@ -192,6 +191,19 @@ export const GET_STUDENT_BY_ID = async (req, res) => {
           "Student details retrieved successfully"
         )
       );
+  } catch (error) {
+    // Handle the error
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const GET_ALL_STUDENT_COUNT = async (req, res) => {
+  try {
+    const studentCount = await Student.countDocuments();
+    return res.status(200).json(new ApiResponse(200, studentCount, "Success"));
   } catch (error) {
     // Handle the error
     res.status(error.code || 500).json({

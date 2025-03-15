@@ -22,7 +22,7 @@ export const VERIFY_TOKEN = async (req, res, next) => {
     let user;
     switch (decodedToken.role) {
       case "student":
-        user = await Student.findById(decodedToken._id).select(
+        user = await Student.findById(decodedToken.id).select(
           "-password -refreshToken"
         );
         break;

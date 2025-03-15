@@ -11,11 +11,13 @@ const subjectSchema = new Schema(
       ref: "StudentAcademicClass",
       required: [true, "Class is required while registrating a subject"],
     }, // The class this subject belongs to
-    teacher: {
-      type: Schema.Types.ObjectId,
-      ref: "Teacher",
-      required: [true, "Please assign a teacher to this subject"],
-    }, // The teacher assigned to this subject
+    teacher: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Teacher",
+        required: [true, "Please assign a teacher to this subject"],
+      },
+    ], // The teacher assigned to this subject
     students: [{ type: Schema.Types.ObjectId, ref: "Student" }], // Students enrolled in this subject
     syllabus: { type: String }, // Syllabus details (optional)
   },

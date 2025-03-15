@@ -15,7 +15,7 @@ subjectRouter.post(
   authorize(["principal"]),
   REGISTER_SUBJECT
 );
-subjectRouter.get("/getsubjectsbyclass", GET_SUBJECT_BY_CLASS);
+subjectRouter.get("/getsubjectsbyclass/:classId", GET_SUBJECT_BY_CLASS);
 subjectRouter.get("/getsubjectbyid/:subjectId", GET_SUBJECT_BY_ID);
 
 export default subjectRouter;

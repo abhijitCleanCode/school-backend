@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import bcrypt from "bcrypt";
 import { Teacher } from "../models/teacher.model.js";
 import { StudentAcademicClass } from "../models/class.model.js";
 import { Subject } from "../models/subject.model.js";
@@ -6,6 +7,24 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { TeacherAttendance } from "../models/teacherAttendance.model.js";
 import { PaymentRecord } from "../models/paymentRecord.model.js";
+
+const generateAccessToken_RefreshToken = async function (userId) {
+  try {
+    const teacher = await Teacher.findById(userId);
+    const accessToken = teacher.generateAccessToken();
+    const refreshToken = teacher.generateRefreshToken();
+
+    // user.refreshToken = refreshToken;
+    // await user.save({ validateBeforeSave: false });
+
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new ApiError(
+      500,
+      "Something went wrong while generating referesh and access token"
+    );
+  }
+};
 
 export const REGISTER_TEACHER = async (req, res) => {
   const {
@@ -110,6 +129,99 @@ export const REGISTER_TEACHER = async (req, res) => {
     }
     session.endSession();
 
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const LOGIN_TEACHER = async (req, res) => {
+  const { email = "", password = "" } = req.body;
+
+  try {
+    if ([email, password].some((field) => field.trim() === ""))
+      throw new ApiError(400, "All fields are required");
+
+    const teacher = await Teacher.findOne({ email });
+    if (!teacher) {
+      throw new ApiError(404, "Teacher not found");
+    }
+
+    const isPasswordValid = await teacher.comparePassword(password);
+    if (!isPasswordValid) {
+      throw new ApiError(401, "Invalid credentials");
+    }
+
+    const { accessToken, refreshToken } =
+      await generateAccessToken_RefreshToken(teacher._id);
+
+    // Don't send password to front-end
+    const loggedInTeacher = await Teacher.findById(teacher._id).select(
+      "-password -refreshToken"
+    );
+
+    const options = {
+      httpOnly: true,
+      secure: true,
+    };
+
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(
+        new ApiResponse(
+          200,
+          { user: loggedInTeacher, accessToken },
+          "You are logged in successfully!"
+        )
+      );
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const CHANGE_PASSWORD = async (req, res) => {
+  const { _id: teacherId } = req.user;
+  const { oldPassword = "", newPassword = "" } = req.body;
+
+  try {
+    if (!teacherId) {
+      throw new ApiError(401, "Unauthorized: Teacher not authenticated");
+    }
+
+    if ([oldPassword, newPassword].some((field) => field.trim() === "")) {
+      throw new ApiError(400, "Old password and new password are required");
+    }
+
+    if (oldPassword === newPassword) {
+      throw new ApiError(
+        400,
+        "New password must be different from the old password"
+      );
+    }
+
+    const teacher = await Teacher.findById(teacherId).select("+password");
+    if (!teacher) {
+      throw new ApiError(404, "Teacher not found");
+    }
+
+    const isPasswordValid = await teacher.comparePassword(oldPassword);
+    if (!isPasswordValid) {
+      throw new ApiError(401, "Old password is incorrect");
+    }
+
+    teacher.password = newPassword;
+    await teacher.save({ validateBeforeSave: false });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Password changed successfully"));
+  } catch (error) {
     res.status(error.code || 500).json({
       success: false,
       message: error.message,
@@ -474,10 +586,18 @@ export const MAKE_CLASS_TEACHER = async (req, res) => {
 export const DELETE_ASSIGNED_SUBJECT_CLASSES = async (req, res) => {
   try {
     const { teacherId } = req.params; // Get the teacher ID from the request parameters
-    const { classesToRemove, subjectsToRemove } = req.body; // Arrays of IDs
+    const { classesToRemove = [], subjectsToRemove = [] } = req.body; // Arrays of IDs
 
-    if (!Array.isArray(classesToRemove) || !Array.isArray(subjectsToRemove)) {
-      return res.status(400).json({ message: "Invalid input format." });
+    if (classesToRemove?.length !== 0) {
+      if (!Array.isArray(classesToRemove)) {
+        return res.status(400).json({ message: "Invalid input format." });
+      }
+    }
+
+    if (subjectsToRemove?.length !== 0) {
+      if (!Array.isArray(subjectsToRemove)) {
+        return res.status(400).json({ message: "Invalid input format." });
+      }
     }
 
     // Find teacher and update assigned subjects & classes
@@ -491,7 +611,7 @@ export const DELETE_ASSIGNED_SUBJECT_CLASSES = async (req, res) => {
       },
       { new: true }
     )
-      .populate("assignedSubjects", "name")
+      // .populate("subjects", "name")
       .populate("assignedClasses", "className");
 
     if (!updatedTeacher) {
@@ -635,8 +755,93 @@ export const ADD_TRANSACTION = async (req, res) => {
   }
 };
 
+export const GET_TEACHERS_BY_ADVANCE_AND_STATUS = async (req, res) => {
+  const { month, advancePay, status, page = 1, limit = 10 } = req.query;
+
+  try {
+    // Validate query parameters
+    if (!month) {
+      throw new ApiError(400, "Month is required.");
+    }
+
+    // Build the filter
+    const filter = { month };
+    if (advancePay !== undefined) {
+      filter.advancePay = advancePay === "true"; // Convert string to boolean
+    }
+    if (status !== undefined) {
+      filter.status = status; // Filter by salary status
+    }
+
+    // Calculate pagination
+    const skip = (page - 1) * limit;
+
+    // Fetch payment records with the specified filter and pagination
+    const paymentRecords = await PaymentRecord.find(filter)
+      .populate("teacher", "name email phoneNumber")
+      .skip(skip)
+      .limit(Number(limit));
+
+    // Extract unique teachers who meet both conditions
+    const teachers = [];
+    const teacherIds = new Set(); // To avoid duplicates
+
+    // Group payment records by teacher
+    const teacherPaymentMap = new Map();
+
+    paymentRecords.forEach((record) => {
+      const teacherId = record.teacher._id.toString();
+      if (!teacherPaymentMap.has(teacherId)) {
+        teacherPaymentMap.set(teacherId, {
+          teacher: record.teacher,
+          hasPaid: false,
+          hasAdvance: false,
+        });
+      }
+
+      const teacherData = teacherPaymentMap.get(teacherId);
+      if (record.status === "paid") {
+        teacherData.hasPaid = true;
+      }
+      if (record.advancePay) {
+        teacherData.hasAdvance = true;
+      }
+    });
+
+    // Filter teachers who have both received salary and taken an advance
+    teacherPaymentMap.forEach((value) => {
+      if (value.hasPaid && value.hasAdvance) {
+        teachers.push(value.teacher);
+      }
+    });
+
+    // Get total count for pagination
+    const totalCount = teachers.length;
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          teachers,
+          pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+          },
+        },
+        "Teachers fetched successfully."
+      )
+    );
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 export const GET_PAYMENT_RECORDS_BY_TEACHER = async (req, res) => {
-  console.log("GET_PAYMENT_RECORDS_BY_TEACHER");
   const { teacherId } = req.params;
   const { month, status } = req.query;
   console.log("teacherId: ", teacherId);

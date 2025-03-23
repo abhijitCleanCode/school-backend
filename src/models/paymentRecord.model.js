@@ -7,7 +7,6 @@ const paymentRecordSchema = new Schema(
       ref: "Teacher",
       required: true,
     }, // Reference to the Teacher model
-    // salary: { type: Number, required: true }, // Salary amount
     month: { type: String, required: true }, // e.g., "2023-10"
     status: {
       type: String,

@@ -2,14 +2,17 @@ import { Router } from "express";
 import {
   ADD_TRANSACTION,
   ASSIGN_CLASSES_AND_SUBJECTS_TO_TEACHER,
-  ASSIGN_CLASSES_TO_TEACHER,
-  ASSIGN_SUBJECT_TO_TEACHER,
+  CHANGE_PASSWORD,
+  // ASSIGN_CLASSES_TO_TEACHER,
+  // ASSIGN_SUBJECT_TO_TEACHER,
   DELETE_ASSIGNED_SUBJECT_CLASSES,
   GET_ALL_TEACHER_COUNT,
   GET_ALL_TEACHERS,
   GET_PAYMENT_RECORDS_BY_TEACHER,
   GET_TEACHER_ATTENDANCE_HISTORY,
   GET_TEACHER_BY_ID,
+  GET_TEACHERS_BY_ADVANCE_AND_STATUS,
+  LOGIN_TEACHER,
   MAKE_CLASS_TEACHER,
   MARK_ATTENDANCE_BY_DATE,
   REGISTER_TEACHER,
@@ -25,6 +28,10 @@ teacherRouter.post(
   authorize(["principal"]),
   REGISTER_TEACHER
 );
+teacherRouter.route("/login").post(LOGIN_TEACHER);
+teacherRouter
+  .route("/change-password")
+  .post(VERIFY_TOKEN, authorize(["teacher"]), CHANGE_PASSWORD);
 teacherRouter.get("/all-teachers", GET_ALL_TEACHERS);
 teacherRouter.get("/:teacherId", GET_TEACHER_BY_ID);
 teacherRouter
@@ -58,7 +65,14 @@ teacherRouter
   .post(VERIFY_TOKEN, authorize(["principal"]), ADD_TRANSACTION);
 teacherRouter
   .route("/payment-records/teacher/:teacherId")
-  .get(VERIFY_TOKEN, authorize(["principal"], GET_PAYMENT_RECORDS_BY_TEACHER));
+  .get(
+    VERIFY_TOKEN,
+    authorize(["principal", "teacher"]),
+    GET_PAYMENT_RECORDS_BY_TEACHER
+  );
+teacherRouter
+  .route("/payment-records/teachers")
+  .get(GET_TEACHERS_BY_ADVANCE_AND_STATUS);
 teacherRouter.get("", GET_ALL_TEACHER_COUNT);
 
 export default teacherRouter;

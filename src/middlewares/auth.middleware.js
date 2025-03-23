@@ -9,14 +9,11 @@ export const VERIFY_TOKEN = async (req, res, next) => {
       req.cookies?.accessToken ||
       req.header("Authorization")?.replace("Bearer ", "");
 
-    console.log("auth.middleware :: token: ", token);
-
     if (!token) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-    console.log("auth.middleware :: decodedToken: ", decodedToken);
 
     // Find the user based on the decoded token's role and ID
     let user;

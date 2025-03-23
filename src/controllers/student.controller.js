@@ -3,7 +3,6 @@ import { Student } from "../models/student.model.js";
 import { StudentAcademicClass } from "../models/class.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import bcrypt from "bcrypt";
 import { Subject } from "../models/subject.model.js";
 
 const generateAccessToken_RefreshToken = async function (userId) {
@@ -152,11 +151,56 @@ export const LOGIN_STUDENT = async (req, res) => {
       .json(
         new ApiResponse(
           200,
-          { student: loggedInStudent, accessToken, refreshToken },
+          { user: loggedInStudent, accessToken },
           "You are logged in successfully!"
         )
       );
   } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const CHANGE_STUDENT_PASSWORD = async (req, res) => {
+  const { _id: studentId } = req.user;
+  const { oldPassword = "", newPassword = "" } = req.body;
+
+  try {
+    if (!studentId) {
+      throw new ApiError(401, "Unauthorized: Student not authenticated");
+    }
+
+    if ([oldPassword, newPassword].some((field) => field.trim() === "")) {
+      throw new ApiError(400, "Old password and new password are required");
+    }
+
+    if (oldPassword === newPassword) {
+      throw new ApiError(
+        400,
+        "New password must be different from the old password"
+      );
+    }
+
+    const student = await Student.findById(studentId).select("+password");
+    if (!student) {
+      throw new ApiError(404, "Student not found");
+    }
+
+    const isPasswordValid = await student.comparePassword(oldPassword);
+    if (!isPasswordValid) {
+      throw new ApiError(401, "Old password is incorrect");
+    }
+
+    student.password = newPassword;
+    await student.save({ validateBeforeSave: false });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "Password changed successfully"));
+  } catch (error) {
+    // Handle the error
     res.status(error.code || 500).json({
       success: false,
       message: error.message,

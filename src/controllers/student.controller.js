@@ -4,6 +4,7 @@ import { StudentAcademicClass } from "../models/class.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { Subject } from "../models/subject.model.js";
+import { FeePayment } from "../models/feepayment.model.js";
 
 const generateAccessToken_RefreshToken = async function (userId) {
   try {
@@ -33,6 +34,7 @@ export const REGISTER_STUDENT = async (req, res) => {
     grade,
     parentContact,
     parentName,
+    gender,
   } = req.body;
 
   // start a MongoDB session
@@ -62,6 +64,7 @@ export const REGISTER_STUDENT = async (req, res) => {
           grade,
           parentContact,
           parentName,
+          gender,
         },
       ],
       { session }
@@ -505,4 +508,120 @@ export const UPDATE_STUDENT = async (req, res) => {
   }
 };
 
-// get student fee history
+//* accounting - fee management
+export const MARK_FEE_PAYMENT_STATUS = async (req, res) => {
+  const { student, month, status } = req.body;
+
+  try {
+    const studentExists = await Student.findById(student);
+    if (!studentExists) {
+      throw new ApiError(404, "Student not found.");
+    }
+
+    const feePayment = await FeePayment.findOneAndUpdate(
+      { student, month },
+      { status },
+      { upsert: true, new: true }
+    );
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          feePayment,
+          "Fee payment status updated successfully."
+        )
+      );
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const GET_FEE_PAYMENT_STATUS_BY_CLASS = async (req, res) => {
+  const { classId } = req.params;
+  const { month } = req.query;
+  console.log("classId: ", classId);
+
+  try {
+    if (!month) {
+      throw new ApiError(400, "Month is required.");
+    }
+
+    const students = await Student.find({ studentClass: classId }).select(
+      "_id name"
+    );
+    console.log("students: ", students);
+
+    const feePaymentStatus = await Promise.all(
+      students.map(async (student) => {
+        const feePayment = await FeePayment.findOne({
+          student: student._id,
+          month,
+        }).select("status");
+
+        return {
+          student: {
+            _id: student._id,
+            name: student.name,
+          },
+          status: feePayment ? feePayment.status : "not paid",
+        };
+      })
+    );
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          feePaymentStatus,
+          "Fee payment status fetched successfully."
+        )
+      );
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const GET_FEE_PAYMENT_HISTORY_BY_STUDENT = async (req, res) => {
+  const { studentId } = req.params;
+  const { month } = req.query;
+
+  try {
+    const student = await Student.findById(studentId);
+    if (!student) {
+      throw new ApiError(404, "Student not found.");
+    }
+
+    const filter = { student: studentId };
+    if (month) {
+      filter.month = month; // Filter by month if provided
+    }
+
+    const feePayments = await FeePayment.find(filter).select(
+      "month status paidBy createdAt"
+    );
+
+    res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          feePayments,
+          "Fee payment history fetched successfully."
+        )
+      );
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};

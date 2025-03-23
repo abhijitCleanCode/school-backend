@@ -19,7 +19,6 @@ const subjectSchema = new Schema(
       },
     ], // The teacher assigned to this subject
     students: [{ type: Schema.Types.ObjectId, ref: "Student" }], // Students enrolled in this subject
-    syllabus: { type: String }, // Syllabus details (optional)
   },
   { timestamps: true }
 );

@@ -12,7 +12,6 @@ export const REGISTER_SUBJECT = async (req, res) => {
     class: classId,
     teacher: teacherId,
     students: studentIds,
-    syllabus,
   } = req.body;
 
   // start a MongoDB session
@@ -53,16 +52,16 @@ export const REGISTER_SUBJECT = async (req, res) => {
           class: classId,
           teacher: teacherId,
           students: studentIds || [], // Default to an empty array if no students are provided
-          syllabus,
         },
       ],
       { session }
     );
-
+    console.log("New Subject: ", newSubject);
     // check if subject is successfully created
-    const createdSubject = await Subject.findById(newSubject._id).session(
+    const createdSubject = await Subject.findById(newSubject[0]._id).session(
       session
     );
+    console.log("Created Subject: ", createdSubject);
     if (!createdSubject) {
       throw new ApiError(400, "Uh oh! Subject registration failed");
     }

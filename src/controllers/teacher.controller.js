@@ -122,7 +122,9 @@ export const REGISTER_TEACHER = async (req, res) => {
 
     res
       .status(201)
-      .json(new ApiResponse(201, createdTeacher, "Teacher created"));
+      .json(
+        new ApiResponse(201, createdTeacher, "Teacher created successfully")
+      );
   } catch (error) {
     if (session.inTransaction()) {
       await session.abortTransaction();

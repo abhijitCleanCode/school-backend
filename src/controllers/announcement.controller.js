@@ -96,7 +96,7 @@ export const GET_ALL_ANNOUNCEMENT = async (req, res) => {
   const skip = (page - 1) * limit;
 
   try {
-    const announcements = Announcement.find()
+    const announcements = await Announcement.find()
       .populate({
         path: "createdByTeacher",
         select: "name role classTeacher",
@@ -186,7 +186,7 @@ export const DELETE_ANNOUNCEMENT = async (req, res) => {
     const announcements = await Announcement.find({
       _id: { $in: announcementIds },
     });
-    if (announcementIds.length === announcements.length) {
+    if (announcementIds.length !== announcements.length) {
       throw new ApiError(404, "One or more announcements not found");
     }
 

@@ -7,6 +7,7 @@ import { StudentAcademicClass } from "../models/class.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { uploadFileOnCloudinary } from "../utils/cloudinary.utils.js";
 import { Exam } from "../models/exam.model.js";
+import { Expense } from "../models/expenses.model.js";
 
 const generateTokens = (principal) => {
   const accessToken = jwt.sign(
@@ -257,6 +258,84 @@ export const GET_ALL_EXAMS = async (req, res) => {
     }
 
     return res.status(200).json(new ApiResponse(200, { exams }, "Exams found"));
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+//* accounting - other expenses
+export const ADD_EXPENSE = async (req, res) => {
+  const { name, description, amount } = req.body;
+
+  try {
+    const expense = new Expense({
+      name,
+      description,
+      amount,
+    });
+
+    await expense.save();
+
+    res
+      .status(201)
+      .json(new ApiResponse(201, expense, "Expense added successfully."));
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const GET_ALL_EXPENSES = async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+
+  try {
+    const skip = (page - 1) * limit;
+
+    const expenses = await Expense.find().skip(skip).limit(Number(limit));
+
+    const totalCount = await Expense.countDocuments();
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          expenses,
+          pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            totalCount,
+            totalPages: Math.ceil(totalCount / limit),
+          },
+        },
+        "Expenses fetched successfully."
+      )
+    );
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const DELETE_EXPENSE = async (req, res) => {
+  const { expenseId } = req.params;
+
+  try {
+    const expense = await Expense.findByIdAndDelete(expenseId);
+
+    if (!expense) {
+      throw new ApiError(404, "Expense not found.");
+    }
+
+    res
+      .status(200)
+      .json(new ApiResponse(200, null, "Expense deleted successfully."));
   } catch (error) {
     res.status(error.code || 500).json({
       success: false,

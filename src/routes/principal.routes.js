@@ -1,7 +1,10 @@
 import { Router } from "express";
 import {
+  ADD_EXPENSE,
   CREATE_EXAM,
+  DELETE_EXPENSE,
   GET_ALL_EXAMS,
+  GET_ALL_EXPENSES,
   LOGIN_PRINCIPAL,
   REGISTER_PRINCIPAL,
   UPLOAD_EXAM_TIME_TABLE,
@@ -26,5 +29,12 @@ principalRouter
     UPLOAD_EXAM_TIME_TABLE
   );
 principalRouter.route("/getallexams").get(GET_ALL_EXAMS);
+principalRouter
+  .route("/expenses/add")
+  .post(VERIFY_TOKEN, authorize(["principal"]), ADD_EXPENSE);
+principalRouter.route("/expenses/getAllExpenses").get(GET_ALL_EXPENSES);
+principalRouter
+  .route("/expenses/delete/:expenseId")
+  .delete(VERIFY_TOKEN, authorize(["principal"]), DELETE_EXPENSE);
 
 export default principalRouter;

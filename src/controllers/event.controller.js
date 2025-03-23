@@ -174,7 +174,7 @@ export const DELETE_EVENTS = async (req, res) => {
     }
 
     const events = await Event.find({ _id: { $in: eventIds } });
-    if (events.length === eventIds.length) {
+    if (events.length !== eventIds.length) {
       throw new ApiError(404, "One or more events not found");
     }
 

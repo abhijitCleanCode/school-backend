@@ -22,10 +22,10 @@ const teacherSchema = new Schema(
       type: String,
       required: [true, "Phone number is required while registrating a teacher"],
       unique: [true, "Teacher must have a unique phone number"],
-      match: [
-        /^\+[1-9]\d{0,3}\d{10}$/,
-        "Phone number must be 10 digits without country code",
-      ],
+      // match: [
+      //   /^\+[1-9]\d{0,3}\d{10}$/,
+      //   "Phone number must be 10 digits without country code",
+      // ],
       trim: true,
     },
     password: { type: String, required: true },

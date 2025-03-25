@@ -8,6 +8,7 @@ import {
   DELETE_ASSIGNED_SUBJECT_CLASSES,
   GET_ALL_TEACHER_COUNT,
   GET_ALL_TEACHERS,
+  GET_ALL_TEACHERS_WITHOUT_PAGINATION,
   GET_PAYMENT_RECORDS_BY_TEACHER,
   GET_TEACHER_ATTENDANCE_HISTORY,
   GET_TEACHER_BY_ID,
@@ -33,6 +34,10 @@ teacherRouter
   .route("/change-password")
   .post(VERIFY_TOKEN, authorize(["teacher"]), CHANGE_PASSWORD);
 teacherRouter.get("/all-teachers", GET_ALL_TEACHERS);
+teacherRouter.get(
+  "/all-teachers/no-pagination",
+  GET_ALL_TEACHERS_WITHOUT_PAGINATION
+);
 teacherRouter.get("/:teacherId", GET_TEACHER_BY_ID);
 teacherRouter
   .route("/assign-classes-and-subjects/:teacherId")

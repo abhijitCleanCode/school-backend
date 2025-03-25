@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   GET_ALL_CLASS,
+  GET_ALL_CLASSES_WITHOUT_PAGINATION,
   GET_CLASS_BY_ID,
   REGISTER_CLASS,
   UPDATE_CLASS,
@@ -17,6 +18,10 @@ classRouter.post(
   VERIFY_TOKEN,
   authorize(["principal"]),
   REGISTER_CLASS
+);
+classRouter.get(
+  "/all-classes/no-pagination",
+  GET_ALL_CLASSES_WITHOUT_PAGINATION
 );
 classRouter.get("/all-classes", GET_ALL_CLASS);
 classRouter.get("/:id", GET_CLASS_BY_ID);

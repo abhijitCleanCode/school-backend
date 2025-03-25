@@ -173,3 +173,5 @@
 {"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/principal/expenses/getAllExpenses\",\"status\":\"200\",\"responseTime\":\"164.183\"}","timestamp":"2025-03-23T14:18:35.555Z"}
 {"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"DELETE\",\"url\":\"/api/v1/principal/expenses/delete/67e017dbfbdffd5e4888f116\",\"status\":\"401\",\"responseTime\":\"1.464\"}","timestamp":"2025-03-23T14:19:52.245Z"}
 {"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"DELETE\",\"url\":\"/api/v1/principal/expenses/delete/67e017dbfbdffd5e4888f116\",\"status\":\"200\",\"responseTime\":\"249.899\"}","timestamp":"2025-03-23T14:19:58.488Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/class/67e1af44955ace22ea61e822\",\"status\":\"200\",\"responseTime\":\"332.402\"}","timestamp":"2025-03-24T19:23:03.388Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"PUT\",\"url\":\"/api/v1/student/update-student/67add062cf13fc4162fa801d\",\"status\":\"200\",\"responseTime\":\"639.990\"}","timestamp":"2025-03-24T19:37:17.234Z"}

@@ -165,6 +165,33 @@ export const GET_ALL_CLASS = async (req, res) => {
   }
 };
 
+export const GET_ALL_CLASSES_WITHOUT_PAGINATION = async (req, res) => {
+  try {
+    const classes = await StudentAcademicClass.find()
+      .populate("classTeacher", "name")
+      .populate("students", "name rollNumber")
+      .populate("subjects", "name")
+      .lean()
+      .exec();
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          classes,
+          count: classes.length,
+        },
+        "All classes retrieved successfully without pagination"
+      )
+    );
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 export const GET_CLASS_BY_ID = async (req, res) => {
   try {
     const classId = req.params.id;

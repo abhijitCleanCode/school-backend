@@ -21,11 +21,11 @@ principalRouter
   .route("/create-exam")
   .post(VERIFY_TOKEN, authorize(["principal"]), CREATE_EXAM);
 principalRouter
-  .route("/upload-exam-timetable")
+  .route("/upload-exam-timetable/:examId")
   .post(
     VERIFY_TOKEN,
     authorize(["principal"]),
-    upload.single("timetable"),
+    upload.single("timeTable"),
     UPLOAD_EXAM_TIME_TABLE
   );
 principalRouter.route("/getallexams").get(GET_ALL_EXAMS);

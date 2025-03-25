@@ -284,6 +284,34 @@ export const GET_ALL_TEACHERS = async (req, res) => {
   }
 };
 
+export const GET_ALL_TEACHERS_WITHOUT_PAGINATION = async (req, res) => {
+  try {
+    const teachers = await Teacher.find()
+      .populate("assignedClasses", "className section")
+      .populate("subject", "name")
+      .select("-password")
+      .sort({ name: 1 })
+      .lean()
+      .exec();
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          teachers,
+          count: teachers.length,
+        },
+        "All teachers retrieved successfully without pagination"
+      )
+    );
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // fetch the teacher details along with the classes and subject assigned to them
 export const GET_TEACHER_BY_ID = async (req, res) => {
   const { teacherId } = req.params;

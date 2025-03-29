@@ -53,6 +53,6 @@ studentRouter.get(
   authorize(["principal", "student"]),
   GET_FEE_PAYMENT_HISTORY_BY_STUDENT
 );
-studentRouter.get("/gender-ratio",  getRatio )
+studentRouter.get("/gender-ratio", VERIFY_TOKEN,  getRatio )
 
 export default studentRouter;

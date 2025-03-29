@@ -175,3 +175,10 @@
 {"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"DELETE\",\"url\":\"/api/v1/principal/expenses/delete/67e017dbfbdffd5e4888f116\",\"status\":\"200\",\"responseTime\":\"249.899\"}","timestamp":"2025-03-23T14:19:58.488Z"}
 {"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/class/67e1af44955ace22ea61e822\",\"status\":\"200\",\"responseTime\":\"332.402\"}","timestamp":"2025-03-24T19:23:03.388Z"}
 {"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"PUT\",\"url\":\"/api/v1/student/update-student/67add062cf13fc4162fa801d\",\"status\":\"200\",\"responseTime\":\"639.990\"}","timestamp":"2025-03-24T19:37:17.234Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/student/ration\",\"status\":\"404\",\"responseTime\":\"5.598\"}","timestamp":"2025-03-29T04:46:20.465Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/student/ratio\",\"status\":\"404\",\"responseTime\":\"2.531\"}","timestamp":"2025-03-29T04:46:32.977Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/student/gender-ratio\",\"status\":\"401\",\"responseTime\":\"4.629\"}","timestamp":"2025-03-29T04:50:03.117Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/student/gender-ratio\",\"status\":\"200\",\"responseTime\":\"74.418\"}","timestamp":"2025-03-29T04:50:30.958Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/student/gender-ratio\",\"status\":\"200\",\"responseTime\":\"64.310\"}","timestamp":"2025-03-29T04:51:24.398Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/student/gender-ratio\",\"status\":\"200\",\"responseTime\":\"85.045\"}","timestamp":"2025-03-29T05:00:12.338Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/student/gender-ratio\",\"status\":\"200\",\"responseTime\":\"497.099\"}","timestamp":"2025-03-29T05:01:23.716Z"}

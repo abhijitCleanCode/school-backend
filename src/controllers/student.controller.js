@@ -35,13 +35,22 @@ export const REGISTER_STUDENT = async (req, res) => {
     parentContact,
     parentName,
     gender,
+    aadharId, // Fixed field names
+    whatsappNumber,
+    dob,
+    motherAadhar,
+    fatherAadhar,
+    studentPan,
+    phoneNumber,
+    address
   } = req.body;
 
-  // start a MongoDB session
+  // Start a MongoDB session
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
+    // Check if student already exists
     const existingStudent = await Student.findOne({ email });
     if (existingStudent) {
       throw new ApiError(400, "Student already exists");
@@ -53,66 +62,73 @@ export const REGISTER_STUDENT = async (req, res) => {
       throw new ApiError(400, "Invalid class assigned to student");
     }
 
+  
+
+    // Create the student
     const newStudent = await Student.create(
       [
         {
           name,
           email,
-          password,
+          password, 
           studentClass,
           rollNumber,
           grade,
           parentContact,
           parentName,
           gender,
+          aadharId,
+          whatsappNumber,
+          dob,
+          motherAadhar,
+          fatherAadhar,
+          studentPan,
+          phoneNumber,
+          address
         },
       ],
       { session }
     );
 
-    // check if the student is successfully created
+    // Check if the student is successfully created
     const createdStudent = await Student.findById(newStudent[0]._id)
       .populate({
         path: "studentClass",
         select: "className section classTeacher",
         populate: {
           path: "classTeacher",
-          select: "name email", // Select only necessary fields from Teacher
+          select: "name email",
         },
       })
       .select("-password")
       .session(session);
+
     if (!createdStudent) {
       throw new ApiError(500, "Uh oh! Student registration failed");
     }
 
-    // Add the student's ID to the class's students array, to maitain data consistency between student and class model
+    // Add the student's ID to the class's students array
     classExists.students.push(newStudent[0]._id);
-    await classExists.save();
+    await classExists.save({ session });
 
     // Commit the transaction
     await session.commitTransaction();
     session.endSession();
 
-    // Respond with success message and student details (excluding password)
-    return res
-      .status(201)
-      .json(
-        new ApiResponse(200, createdStudent, "Student Registered Successfully")
-      );
+    return res.status(201).json(
+      new ApiResponse(200, createdStudent, "Student Registered Successfully")
+    );
   } catch (error) {
     // Abort the transaction in case of an error
     await session.abortTransaction();
     session.endSession();
 
-    // Handle the error
     res.status(error.code || 500).json({
       success: false,
       message: error.message,
     });
   }
 };
-
 export const LOGIN_STUDENT = async (req, res) => {
   const { email = "", password = "" } = req.body;
 

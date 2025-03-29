@@ -15,6 +15,7 @@ import {
 } from "../controllers/student.controller.js";
 import { VERIFY_TOKEN } from "../middlewares/auth.middleware.js";
 import { authorize } from "../middlewares/authorize.middleware.js";
+import { getRatio } from "../controllers/genderratio.controller.js";
 const studentRouter = Router();
 
 // Route for student registration
@@ -52,5 +53,6 @@ studentRouter.get(
   authorize(["principal", "student"]),
   GET_FEE_PAYMENT_HISTORY_BY_STUDENT
 );
+studentRouter.get("/gender-ratio",  getRatio )
 
 export default studentRouter;

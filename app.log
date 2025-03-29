@@ -182,3 +182,15 @@
 {"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/student/gender-ratio\",\"status\":\"200\",\"responseTime\":\"64.310\"}","timestamp":"2025-03-29T04:51:24.398Z"}
 {"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/student/gender-ratio\",\"status\":\"200\",\"responseTime\":\"85.045\"}","timestamp":"2025-03-29T05:00:12.338Z"}
 {"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/student/gender-ratio\",\"status\":\"200\",\"responseTime\":\"497.099\"}","timestamp":"2025-03-29T05:01:23.716Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/principal/expenses/getAllExpenses\",\"status\":\"200\",\"responseTime\":\"163.520\"}","timestamp":"2025-03-29T08:41:46.519Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"POST\",\"url\":\"/api/v1/principal/expenses/getAllExpenses\",\"status\":\"404\",\"responseTime\":\"52.380\"}","timestamp":"2025-03-29T08:46:22.749Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"POST\",\"url\":\"/api/v1/principal/expenses/add\",\"status\":\"401\",\"responseTime\":\"15.537\"}","timestamp":"2025-03-29T08:46:50.891Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"POST\",\"url\":\"/api/v1/principal/expenses/add\",\"status\":\"201\",\"responseTime\":\"103.359\"}","timestamp":"2025-03-29T08:47:32.459Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"POST\",\"url\":\"/api/v1/principal/register\",\"status\":\"201\",\"responseTime\":\"303.587\"}","timestamp":"2025-03-29T09:10:16.062Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"POST\",\"url\":\"/api/v1/principal/change_password/:67e7b8f7d7aa51a35f8ae4b3\",\"status\":\"404\",\"responseTime\":\"32.401\"}","timestamp":"2025-03-29T09:14:49.968Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"POST\",\"url\":\"/api/v1/principal/change_password/67e7b8f7d7aa51a35f8ae4b3\",\"status\":\"404\",\"responseTime\":\"3.149\"}","timestamp":"2025-03-29T09:17:02.223Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"POST\",\"url\":\"/api/v1/principal/change_password/67e7b8f7d7aa51a35f8ae4b3\",\"status\":\"401\",\"responseTime\":\"15.677\"}","timestamp":"2025-03-29T09:19:47.527Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"POST\",\"url\":\"/api/v1/principal/register\",\"status\":\"400\",\"responseTime\":\"122.801\"}","timestamp":"2025-03-29T09:22:16.188Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"POST\",\"url\":\"/api/v1/principal/register\",\"status\":\"201\",\"responseTime\":\"371.195\"}","timestamp":"2025-03-29T09:22:21.931Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/principal/change_password/67e7bbcd3101e01dfb2d2275\",\"status\":\"404\",\"responseTime\":\"4.361\"}","timestamp":"2025-03-29T09:24:58.790Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"POST\",\"url\":\"/api/v1/principal/change_password/67e7bbcd3101e01dfb2d2275\",\"status\":\"401\",\"responseTime\":\"71.844\"}","timestamp":"2025-03-29T09:25:15.161Z"}

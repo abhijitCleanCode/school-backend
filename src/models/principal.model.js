@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
-
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 const principalSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -10,5 +11,7 @@ const principalSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+// principalSchema.methods.comparePassword = async function (candidatePassword) {
+//   return await bcrypt.compare(candidatePassword, this.password);
+// };
 export const Principal = mongoose.model("Principal", principalSchema);

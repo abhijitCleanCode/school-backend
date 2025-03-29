@@ -19,6 +19,7 @@ const classSchema = new Schema({
   students: [{ type: Schema.Types.ObjectId, ref: "Student" }], // Array of student IDs
   subjects: [{ type: Schema.Types.ObjectId, ref: "Subject" }], // Array of subject IDs
   timeTable: { type: String },
+  fee:{type:Number, require:true}
   // timetable: [
   //   {
   //     day: { type: String, required: true }, // e.g., "Monday"

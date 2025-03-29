@@ -12,6 +12,7 @@ import {
 import { upload } from "../middlewares/multer.middleware.js";
 import { VERIFY_TOKEN } from "../middlewares/auth.middleware.js";
 import { authorize } from "../middlewares/authorize.middleware.js";
+import { CHANGE_PASSWORD } from "../controllers/principal.controller.js";
 
 const principalRouter = Router();
 
@@ -36,5 +37,8 @@ principalRouter.route("/expenses/getAllExpenses").get(GET_ALL_EXPENSES);
 principalRouter
   .route("/expenses/delete/:expenseId")
   .delete(VERIFY_TOKEN, authorize(["principal"]), DELETE_EXPENSE);
+  principalRouter
+  .route("/change_password/:principalId")
+  .post(VERIFY_TOKEN, authorize(["principal"]), CHANGE_PASSWORD);
 
 export default principalRouter;

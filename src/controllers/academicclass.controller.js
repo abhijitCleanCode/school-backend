@@ -8,7 +8,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { isValidMongoId } from "../constants.js";
 
 export const REGISTER_CLASS = async (req, res) => {
-  const { className, section, classTeacher, students, subjects, timetable } =
+  const { className, section, classTeacher, students, subjects, timetable,fee } =
     req.body;
 
   const session = await mongoose.startSession();
@@ -86,6 +86,7 @@ export const REGISTER_CLASS = async (req, res) => {
           students,
           subjects,
           timetable,
+          fee
         },
       ],
       { session }

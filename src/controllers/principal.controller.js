@@ -51,12 +51,7 @@ export const REGISTER_PRINCIPAL = async (req, res) => {
 
     // Generate JWT tokens
     const { accessToken, refreshToken } = generateTokens(newPrincipal);
-
-    res.status(201).json({
-      message: "Principal registered successfully",
-      accessToken,
-      refreshToken,
-    });
+    
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error", error });
   }
@@ -268,13 +263,14 @@ export const GET_ALL_EXAMS = async (req, res) => {
 
 //* accounting - other expenses
 export const ADD_EXPENSE = async (req, res) => {
-  const { name, description, amount } = req.body;
+  const { name, description, amount,date } = req.body;
 
   try {
     const expense = new Expense({
       name,
       description,
       amount,
+      date:new Date(date)
     });
 
     await expense.save();
@@ -291,12 +287,12 @@ export const ADD_EXPENSE = async (req, res) => {
 };
 
 export const GET_ALL_EXPENSES = async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  // const { page = 1, limit = 10 } = req.query;
 
   try {
-    const skip = (page - 1) * limit;
+    // const skip = (page - 1) * limit;
 
-    const expenses = await Expense.find().skip(skip).limit(Number(limit));
+    const expenses = await Expense.find()
 
     const totalCount = await Expense.countDocuments();
 
@@ -305,14 +301,13 @@ export const GET_ALL_EXPENSES = async (req, res) => {
         200,
         {
           expenses,
-          pagination: {
-            page: Number(page),
-            limit: Number(limit),
+      
+            // page: Number(page),
+            // limit: Number(limit),
             totalCount,
-            totalPages: Math.ceil(totalCount / limit),
-          },
+          
         },
-        "Expenses fetched successfully."
+        "Expenses fetched successfully ."
       )
     );
   } catch (error) {
@@ -337,6 +332,50 @@ export const DELETE_EXPENSE = async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, null, "Expense deleted successfully."));
   } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+export const CHANGE_PASSWORD = async (req, res) => {
+  const { _id: principalId } = req.user;
+  const { oldPassword = "", newPassword = "" } = req.body;
+
+  try {
+    if (!principalId) {
+      throw new ApiError(401, "Unauthorized: Principal not authenticated");
+    }
+
+    if ([oldPassword, newPassword].some((field) => field.trim() === "")) {
+      throw new ApiError(400, "Old password and new password are required");
+    }
+
+    if (oldPassword === newPassword) {
+      throw new ApiError(
+        400,
+        "New password must be different from the old password"
+      );
+    }
+
+    const principal = await Principal.findById(principalId).select("+password");
+    if (!principal) {
+      throw new ApiError(404, "Principal not found");
+    }
+
+    const isPasswordValid = await principal.comparePassword(oldPassword);
+    if (!isPasswordValid) {
+      throw new ApiError(401, "Old password is incorrect");
+    }
+
+    principal.password = newPassword;
+    await principal.save({ validateBeforeSave: false });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, null, "Password changed successfully"));
+  } catch (error) {
+    // Handle the error
     res.status(error.code || 500).json({
       success: false,
       message: error.message,

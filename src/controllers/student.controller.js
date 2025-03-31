@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 import { Student } from "../models/student.model.js";
 import { StudentAcademicClass } from "../models/class.model.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -42,7 +42,7 @@ export const REGISTER_STUDENT = async (req, res) => {
     fatherAadhar,
     studentPan,
     phoneNumber,
-    address
+    address,
   } = req.body;
 
   // Start a MongoDB session
@@ -62,15 +62,13 @@ export const REGISTER_STUDENT = async (req, res) => {
       throw new ApiError(400, "Invalid class assigned to student");
     }
 
-  
-
     // Create the student
     const newStudent = await Student.create(
       [
         {
           name,
           email,
-          password, 
+          password,
           studentClass,
           rollNumber,
           grade,
@@ -84,7 +82,7 @@ export const REGISTER_STUDENT = async (req, res) => {
           fatherAadhar,
           studentPan,
           phoneNumber,
-          address
+          address,
         },
       ],
       { session }
@@ -115,9 +113,11 @@ export const REGISTER_STUDENT = async (req, res) => {
     await session.commitTransaction();
     session.endSession();
 
-    return res.status(201).json(
-      new ApiResponse(200, createdStudent, "Student Registered Successfully")
-    );
+    return res
+      .status(201)
+      .json(
+        new ApiResponse(200, createdStudent, "Student Registered Successfully")
+      );
   } catch (error) {
     // Abort the transaction in case of an error
     await session.abortTransaction();
@@ -557,51 +557,162 @@ export const MARK_FEE_PAYMENT_STATUS = async (req, res) => {
   }
 };
 
+// export const IMPOSE_LATE_FINE = async (req, res) => {
+//   const session = mongoose.startSession();
+
+//   try {
+//     (await session).withTransaction(async () => {
+//       const { student: id } = req.params;
+//       const { lateFineAmount } = req.body;
+
+//       if (!isValidObjectId(id)) {
+//         throw new ApiError(400, "Invalid student ID");
+//       }
+
+//       if (typeof lateFineAmount !== "number" || lateFineAmount < 0) {
+//         throw new ApiError(400, "Late fee amount must be a positive number");
+//       }
+//     });
+//   } catch (error) {}
+// };
+
+export const IMPOSE_LATE_FINE = async (req, res, next) => {
+  const { studentId, month } = req.body;
+
+  if (!studentId || !month) {
+    return next(new ApiError(400, "Student ID and month are required"));
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    // Fetch student and their associated class details
+    const student = await Student.findById(studentId).populate("studentClass");
+    if (!student || !student.studentClass) {
+      throw new ApiError(404, "Student or associated class not found");
+    }
+    console.log("student: ", student);
+    const studentClass = await StudentAcademicClass.findById(
+      student.studentClass._id
+    );
+    console.log("studentClass: ", studentClass);
+
+    const classFee = studentClass.fee || 1000;
+    const lateFine = studentClass.lateFineAmount || 500;
+
+    console.log("classFee: ", classFee);
+    console.log("lateFine: ", lateFine);
+
+    if (classFee === undefined || lateFine === undefined) {
+      throw new ApiError(400, "Class fee or late fine amount is missing");
+    }
+
+    // Find or create payment record
+    let payment = await FeePayment.findOneAndUpdate(
+      { student: studentId, month },
+      {
+        $setOnInsert: {
+          baseAmount: classFee,
+          status: "not paid",
+          lateFine: true, // Marking that late fine was applied
+        },
+        $inc: { lateFineAmount: lateFine },
+      },
+      {
+        upsert: true,
+        new: true,
+        session,
+      }
+    );
+    console.log("payment: ", payment);
+
+    // Ensure totalAmount is correctly updated
+    payment.totalAmount = payment.baseAmount + (payment.lateFineAmount || 0);
+    await payment.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({
+      success: true,
+      message: "Late fine imposed successfully",
+      payment,
+    });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Error imposing late fine:", error.message);
+    return next(error);
+  }
+};
+
 export const GET_FEE_PAYMENT_STATUS_BY_CLASS = async (req, res) => {
   const { classId } = req.params;
   const { month } = req.query;
-  console.log("classId: ", classId);
 
   try {
-    if (!month) {
-      throw new ApiError(400, "Month is required.");
+    if (!month) throw new ApiError(400, "Month is required");
+    if (!isValidObjectId(classId)) {
+      throw new ApiError(400, "Invalid class ID");
     }
 
-    const students = await Student.find({ studentClass: classId }).select(
-      "_id name"
-    );
-    console.log("students: ", students);
+    const students = await Student.find({ studentClass: classId })
+      .select("_id name")
+      .lean();
 
-    const feePaymentStatus = await Promise.all(
-      students.map(async (student) => {
-        const feePayment = await FeePayment.findOne({
-          student: student._id,
-          month,
-        }).select("status");
+    const feePayments = await FeePayment.find({
+      student: { $in: students.map((s) => s._id) },
+      month,
+    }).lean();
 
-        return {
-          student: {
-            _id: student._id,
-            name: student.name,
-          },
-          status: feePayment ? feePayment.status : "not paid",
-        };
-      })
+    const paymentMap = new Map(
+      feePayments.map((payment) => [payment.student.toString(), payment])
     );
 
-    return res
+    const response = students.map((student) => {
+      const payment = paymentMap.get(student._id.toString());
+
+      return {
+        student: {
+          _id: student._id,
+          name: student.name,
+        },
+        status: payment?.status || "not paid",
+        details: payment
+          ? {
+              baseAmount: payment.baseAmount,
+              lateFineAmount: payment.lateFineAmount,
+              totalAmount: payment.totalAmount,
+              isLateFeeApplied: payment.lateFineAmount > 0,
+            }
+          : null,
+      };
+    });
+
+    //* Calculate summary, (paid count, unpaid count, late fee count) statistical data to be displayed in graph
+    const summary = {
+      totalStudents: students.length,
+      paidCount: feePayments.length,
+      unpaidCount: students.length - feePayments.length,
+      lateFeeCount: feePayments.filter((p) => p.lateFineAmount > 0).length,
+    };
+
+    res
       .status(200)
       .json(
         new ApiResponse(
           200,
-          feePaymentStatus,
-          "Fee payment status fetched successfully."
+          { summary, students: response },
+          "Fee status fetched"
         )
       );
   } catch (error) {
-    res.status(error.code || 500).json({
+    logger.error(`Fee status fetch failed: ${error.message}`);
+    res.status(error.statusCode || 500).json({
       success: false,
       message: error.message,
+      ...(process.env.NODE_ENV === "development" && { stack: error.stack }),
     });
   }
 };

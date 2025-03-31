@@ -1,5 +1,4 @@
 import mongoose, { Schema } from "mongoose";
-import bcrypt from "bcrypt";
 
 const classSchema = new Schema({
   className: {
@@ -19,20 +18,8 @@ const classSchema = new Schema({
   students: [{ type: Schema.Types.ObjectId, ref: "Student" }], // Array of student IDs
   subjects: [{ type: Schema.Types.ObjectId, ref: "Subject" }], // Array of subject IDs
   timeTable: { type: String },
-  fee:{type:Number, require:true}
-  // timetable: [
-  //   {
-  //     day: { type: String, required: true }, // e.g., "Monday"
-  //     periods: [
-  //       {
-  //         subject: { type: String, required: true }, // Subject name
-  //         teacher: { type: Schema.Types.ObjectId, ref: "Teacher" }, // Teacher for this subject
-  //         startTime: { type: String }, // "10:00 AM"
-  //         endTime: { type: String }, // "10:45 AM"
-  //       },
-  //     ],
-  //   },
-  // ],
+  fee: { type: Number, require: true },
+  lateFineAmount: { type: Number, require: true },
 });
 
 export const StudentAcademicClass = mongoose.model(

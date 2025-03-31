@@ -8,6 +8,7 @@ import {
   GET_FEE_PAYMENT_STATUS_BY_CLASS,
   GET_STUDENT_BY_CLASS_ID,
   GET_STUDENT_BY_ID,
+  IMPOSE_LATE_FINE,
   LOGIN_STUDENT,
   MARK_FEE_PAYMENT_STATUS,
   REGISTER_STUDENT,
@@ -41,6 +42,12 @@ studentRouter.post(
   authorize(["principal"]),
   MARK_FEE_PAYMENT_STATUS
 );
+studentRouter.post(
+  "/fee-payment/impose-fine",
+  VERIFY_TOKEN,
+  authorize(["principal"]),
+  IMPOSE_LATE_FINE
+);
 studentRouter.get(
   "/fee-payment/history/class/:classId",
   VERIFY_TOKEN,
@@ -53,6 +60,6 @@ studentRouter.get(
   authorize(["principal", "student"]),
   GET_FEE_PAYMENT_HISTORY_BY_STUDENT
 );
-studentRouter.get("/gender-ratio", VERIFY_TOKEN,  getRatio )
+studentRouter.get("/gender-ratio", VERIFY_TOKEN, getRatio);
 
 export default studentRouter;

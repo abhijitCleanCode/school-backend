@@ -7,6 +7,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { ApiError } from "../utils/ApiError.js";
 import { TeacherAttendance } from "../models/teacherAttendance.model.js";
 import { PaymentRecord } from "../models/paymentRecord.model.js";
+import { TeachersLeave } from "../models/teacherLeave.model.js";
 
 const generateAccessToken_RefreshToken = async function (userId) {
   try {
@@ -280,6 +281,114 @@ export const GET_ALL_TEACHERS = async (req, res) => {
     res.status(error.code || 500).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+export const SEND_LEAVE_REQUEST = async (req, res) => {
+  try {
+    const { teacherName, type, email } = req.body;
+
+    // Validate required fields
+    if (!teacherName || !type || !email) {
+      return res.status(400).json({
+        success: false,
+        message: "Teacher name, email, and leave type are required",
+      });
+    }
+
+    // 🔍 Check existing leave count for the teacher
+    const leaveCount = await TeachersLeave.countDocuments({ email });
+
+    if (leaveCount >= 12) {
+      return res.status(400).json({
+        success: false,
+        message: "All leaves are over. You have already used 12 leave requests.",
+      });
+    }
+
+    // ✅ Create new leave request
+    const newLeaveRequest = await TeachersLeave.create({ teacherName, email, type });
+
+    return res.status(201).json({
+      success: true,
+      message: "Leave request submitted successfully",
+      data: newLeaveRequest,
+    });
+
+  } catch (error) {
+    console.error("❌ Error submitting leave request:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while submitting leave request",
+      error: error.message,
+    });
+  }
+};
+export const GET_LEAVE_REQUEST = async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    // Build filter object
+    const filter = {};
+    if (email) {
+      filter.email = email; 
+    }
+
+   
+    const leaves = await TeachersLeave.find(filter);
+
+    return res.status(200).json({
+      success: true,
+      message: email 
+        ? `Leave requests for teacher ${email} retrieved successfully`
+        : "All teachers' leave requests retrieved successfully",
+      count: leaves.length,
+      data: leaves,
+    });
+
+  } catch (error) {
+    console.error("Error fetching leave requests:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while fetching leave requests",
+      error: error.message,
+    });
+  }
+};
+export const DELETE_LEAVE_REQUEST = async (req, res) => {
+  try {
+    const { id } = req.params; // Get ID from URL parameters
+
+    // Validate that ID is provided
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Leave request ID is required",
+      });
+    }
+
+    // Check if the leave request exists
+    const leaveRequest = await TeachersLeave.findByIdAndDelete(id);
+
+    if (!leaveRequest) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave request not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Leave request deleted successfully",
+      data: leaveRequest,
+    });
+
+  } catch (error) {
+    console.error("Error deleting leave request:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while deleting leave request",
+      error: error.message,
     });
   }
 };

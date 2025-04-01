@@ -8,6 +8,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { uploadFileOnCloudinary } from "../utils/cloudinary.utils.js";
 import { Exam } from "../models/exam.model.js";
 import { Expense } from "../models/expenses.model.js";
+import { TeachersLeave } from "../models/teacherLeave.model.js";
 
 const generateTokens = (principal) => {
   const accessToken = jwt.sign(
@@ -57,6 +58,7 @@ export const REGISTER_PRINCIPAL = async (req, res) => {
   }
 };
 
+
 export const LOGIN_PRINCIPAL = async (req, res) => {
   const { email, password } = req.body;
 
@@ -101,7 +103,77 @@ export const LOGIN_PRINCIPAL = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+export const GET_ALL_TEACHERS_LEAVE = async (req, res) => {
+  try {
+    // Fetch all leave requests from the database
+    const allLeaves = await TeachersLeave.find();
 
+    return res.status(200).json({
+      success: true,
+      message: "All teachers' leave requests retrieved successfully",
+      count: allLeaves.length,
+      data: allLeaves,
+    });
+
+  } catch (error) {
+    console.error("Error fetching all leave requests:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while fetching leave requests",
+      error: error.message,
+    });
+  }
+};
+export const ACCEPT_OR_REJECT_TEACHERS_LEAVE = async (req, res) => {
+  try {
+    const { id } = req.params; // Leave request ID
+    console.log(id)
+    const { leaveStatus } = req.body; // New status ("Approved" or "Rejected")
+
+    // Validate inputs
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Leave request ID is required",
+      });
+    }
+
+    if (!leaveStatus || !["Approved", "Rejected"].includes(leaveStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid leave status (Approved/Rejected) is required",
+      });
+    }
+
+    // Find and update the leave request
+    const updatedLeave = await mongoose.model("TeacherLeave").findByIdAndUpdate(
+      id,
+      { leaveStatus },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedLeave) {
+      return res.status(404).json({
+        success: false,
+        message: "Leave request not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Leave request ${leaveStatus.toLowerCase()} successfully`,
+      data: updatedLeave,
+    });
+
+  } catch (error) {
+    console.error("Error updating leave status:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while updating leave status",
+      error: error.message,
+    });
+  }
+};
 export const UPLOAD_TIME_TABLE = async (req, res) => {
   const { classId } = req.params;
 

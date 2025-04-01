@@ -7,7 +7,7 @@ import {
   GET_ALL_EXPENSES,
   LOGIN_PRINCIPAL,
   REGISTER_PRINCIPAL,
-  UPLOAD_EXAM_TIME_TABLE,
+  UPLOAD_EXAM_TIME_TABLE, GET_ALL_TEACHERS_LEAVE, ACCEPT_OR_REJECT_TEACHERS_LEAVE
 } from "../controllers/principal.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { VERIFY_TOKEN } from "../middlewares/auth.middleware.js";
@@ -40,5 +40,11 @@ principalRouter
   principalRouter
   .route("/change_password/:principalId")
   .post(VERIFY_TOKEN, authorize(["principal"]), CHANGE_PASSWORD);
+  principalRouter
+  .route("/get-teachers-leave")
+  .get(GET_ALL_TEACHERS_LEAVE);
+  principalRouter
+  .route("/accept-teachers-leave/:id")
+  .post(ACCEPT_OR_REJECT_TEACHERS_LEAVE);
 
 export default principalRouter;

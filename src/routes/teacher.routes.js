@@ -16,13 +16,14 @@ import {
   LOGIN_TEACHER,
   MAKE_CLASS_TEACHER,
   MARK_ATTENDANCE_BY_DATE,
-  REGISTER_TEACHER,
+  REGISTER_TEACHER, GET_LEAVE_REQUEST, SEND_LEAVE_REQUEST
 } from "../controllers/teacher.controller.js";
 import { VERIFY_TOKEN } from "../middlewares/auth.middleware.js";
 import { authorize } from "../middlewares/authorize.middleware.js";
 
 const teacherRouter = Router();
-
+teacherRouter
+.get("/get-all-leaves",GET_LEAVE_REQUEST)
 teacherRouter.post(
   "/register",
   VERIFY_TOKEN,
@@ -79,5 +80,11 @@ teacherRouter
   .route("/payment-records/teachers")
   .get(GET_TEACHERS_BY_ADVANCE_AND_STATUS);
 teacherRouter.get("", GET_ALL_TEACHER_COUNT);
+
+teacherRouter
+  .route("/send-leave-request")
+  .post(SEND_LEAVE_REQUEST);
+
+  
 
 export default teacherRouter;

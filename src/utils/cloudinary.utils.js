@@ -25,8 +25,9 @@ const uploadFileOnCloudinary = async (localFilePath) => {
       response
     );
 
-    // file has been uploaded successfully
     console.log("File is uploaded on cloudinary");
+
+    //todo: remove the locally saved temporary file
 
     return response;
   } catch (error) {
@@ -37,4 +38,25 @@ const uploadFileOnCloudinary = async (localFilePath) => {
   }
 };
 
-export { uploadFileOnCloudinary };
+const deleteFileFromCloudinary = async (publicId) => {
+  try {
+    if (!publicId) {
+      console.log("Cloudinary publicId is required to delete the file");
+      return null;
+    }
+
+    const response = await cloudinary.uploader.destroy(publicId);
+    console.log(
+      "utils :: cloudinary.utils.js :: uploadFileOnCloudinary :: response: ",
+      response
+    );
+
+    console.log("File is deleted from cloudinary");
+    return response;
+  } catch (error) {
+    console.log("File upload operation failed: ", error);
+    return null;
+  }
+};
+
+export { uploadFileOnCloudinary, deleteFileFromCloudinary };

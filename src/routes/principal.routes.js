@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   ADD_EXPENSE,
   CREATE_EXAM,
+  DELETE_EXAM_BY_ID,
   DELETE_EXPENSE,
   GET_ALL_EXAMS,
   GET_ALL_EXPENSES,
@@ -31,13 +32,16 @@ principalRouter
   );
 principalRouter.route("/getallexams").get(GET_ALL_EXAMS);
 principalRouter
+  .route("/delete-exam/:examId")
+  .delete(VERIFY_TOKEN, DELETE_EXAM_BY_ID);
+principalRouter
   .route("/expenses/add")
   .post(VERIFY_TOKEN, authorize(["principal"]), ADD_EXPENSE);
 principalRouter.route("/expenses/getAllExpenses").get(GET_ALL_EXPENSES);
 principalRouter
   .route("/expenses/delete/:expenseId")
   .delete(VERIFY_TOKEN, authorize(["principal"]), DELETE_EXPENSE);
-  principalRouter
+principalRouter
   .route("/change_password/:principalId")
   .post(VERIFY_TOKEN, authorize(["principal"]), CHANGE_PASSWORD);
   principalRouter

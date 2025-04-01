@@ -1,11 +1,14 @@
-import mongoose from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { Principal } from "../models/principal.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { StudentAcademicClass } from "../models/class.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { uploadFileOnCloudinary } from "../utils/cloudinary.utils.js";
+import {
+  deleteFileFromCloudinary,
+  uploadFileOnCloudinary,
+} from "../utils/cloudinary.utils.js";
 import { Exam } from "../models/exam.model.js";
 import { Expense } from "../models/expenses.model.js";
 import { TeachersLeave } from "../models/teacherLeave.model.js";
@@ -52,7 +55,6 @@ export const REGISTER_PRINCIPAL = async (req, res) => {
 
     // Generate JWT tokens
     const { accessToken, refreshToken } = generateTokens(newPrincipal);
-    
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error", error });
   }
@@ -333,16 +335,53 @@ export const GET_ALL_EXAMS = async (req, res) => {
   }
 };
 
+export const DELETE_EXAM_BY_ID = async (req, res) => {
+  try {
+    const { examId: id } = req.params;
+    if (!isValidObjectId(id)) {
+      throw new ApiError(400, "Invalid complain id");
+    }
+
+    const exam = await Exam.findById(id);
+    if (!exam) {
+      throw new ApiError(404, "Exam not found");
+    }
+
+    // extract public id from url
+    const publicId = exam.timetable?.split("/").pop()?.split(".")[0] || "";
+    console.log(
+      "src :: controllers :: principal.controller.js :: publicId: ",
+      publicId
+    );
+
+    // Delete from Cloudinary (if publicId exists)
+    if (publicId) {
+      await deleteFileFromCloudinary(publicId);
+    }
+
+    await Exam.findByIdAndDelete(id);
+
+    return res
+      .status(200) // status code should be set as 204 - No Content for successful deletions
+      .json(new ApiResponse(200, null, "Exam deleted successfully"));
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 //* accounting - other expenses
 export const ADD_EXPENSE = async (req, res) => {
-  const { name, description, amount,date } = req.body;
+  const { name, description, amount, date } = req.body;
 
   try {
     const expense = new Expense({
       name,
       description,
       amount,
-      date:new Date(date)
+      date: new Date(date),
     });
 
     await expense.save();
@@ -364,7 +403,7 @@ export const GET_ALL_EXPENSES = async (req, res) => {
   try {
     // const skip = (page - 1) * limit;
 
-    const expenses = await Expense.find()
+    const expenses = await Expense.find();
 
     const totalCount = await Expense.countDocuments();
 
@@ -373,11 +412,10 @@ export const GET_ALL_EXPENSES = async (req, res) => {
         200,
         {
           expenses,
-      
-            // page: Number(page),
-            // limit: Number(limit),
-            totalCount,
-          
+
+          // page: Number(page),
+          // limit: Number(limit),
+          totalCount,
         },
         "Expenses fetched successfully ."
       )
@@ -410,6 +448,7 @@ export const DELETE_EXPENSE = async (req, res) => {
     });
   }
 };
+
 export const CHANGE_PASSWORD = async (req, res) => {
   const { _id: principalId } = req.user;
   const { oldPassword = "", newPassword = "" } = req.body;

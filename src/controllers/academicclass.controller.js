@@ -6,10 +6,19 @@ import { Teacher } from "../models/teacher.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { isValidMongoId } from "../constants.js";
+import logger from "../utils/logger.js";
 
 export const REGISTER_CLASS = async (req, res) => {
-  const { className, section, classTeacher, students, subjects, timetable,fee } =
-    req.body;
+  const {
+    className,
+    section,
+    classTeacher,
+    students,
+    subjects,
+    timetable,
+    fee,
+    lateFineAmount,
+  } = req.body;
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -86,7 +95,8 @@ export const REGISTER_CLASS = async (req, res) => {
           students,
           subjects,
           timetable,
-          fee
+          fee,
+          lateFineAmount,
         },
       ],
       { session }
@@ -348,6 +358,106 @@ export const UPDATE_CLASS = async (req, res) => {
     await session.abortTransaction();
     session.endSession();
 
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// these are class deletion services - make a seperate file for scalibility
+export const deleteAssociatedStudents = async (classId, session = null) => {
+  const options = session ? { session } : {};
+  const response = await Student.deleteMany({ studentClass: classId }, options);
+  logger.info(`Deleted ${response.deletedCount} students for class ${classId}`);
+  return response;
+};
+const deleteAssociatedSubjects = async (classId, session = null) => {
+  const options = session ? { session } : {};
+  const response = await Subject.deleteMany({ class: classId }, options);
+  logger.info(`Deleted ${response.deletedCount} subjects for class ${classId}`);
+  return response;
+};
+const updateTeacherReferences = async (
+  classId,
+  classTeacherId,
+  session = null
+) => {
+  const options = session ? { session } : {};
+
+  // Remove class from assignedClasses for all teachers
+  await Teacher.updateMany(
+    { assignedClasses: classId },
+    { $pull: { assignedClasses: classId } },
+    options
+  );
+
+  // Clear classTeacher if this teacher was leading the deleted class
+  if (classTeacherId) {
+    await Teacher.findByIdAndUpdate(
+      classTeacherId,
+      {
+        $unset: { classTeacher: "" },
+      },
+      options
+    );
+  }
+
+  logger.info(`Cleaned teacher references for class ${classId}`);
+};
+export const DELETE_CLASS = async (req, res) => {
+  const session = await mongoose.startSession();
+
+  try {
+    await session.withTransaction(async () => {
+      const { classId: id } = req.params;
+
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        throw new Error("Invalid class ID format");
+      }
+
+      const classObj = await StudentAcademicClass.findById(id).session(session);
+      if (!classObj) {
+        throw new Error("Class not found");
+      }
+
+      // Execute all operations with the same session
+      await Promise.all([
+        deleteAssociatedStudents(id, session),
+        deleteAssociatedSubjects(id, session),
+        updateTeacherReferences(id, classObj.classTeacher, session),
+        StudentAcademicClass.findByIdAndDelete(id, { session }),
+      ]);
+
+      logger.info(`Class ${id} deleted successfully`);
+      res.status(204).end();
+    });
+  } catch (error) {
+    logger.error(`Deletion failed: ${error.message}`);
+    res.status(500).json({ error: error.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+// Accounting - student fee management
+export const GET_FEE_BY_CLASS_ID = async (req, res) => {
+  try {
+    const { classId } = req.params;
+
+    const classFee = await StudentAcademicClass.findById(classId)
+      .select("fee")
+      .lean()
+      .exec();
+
+    console.log("classFee: ", classFee);
+
+    if (!classFee) {
+      throw new ApiError(404, "Class not found.");
+    }
+
+    return res.status(200).json(new ApiResponse(200, classFee, "Fee found"));
+  } catch (error) {
     res.status(error.code || 500).json({
       success: false,
       message: error.message,

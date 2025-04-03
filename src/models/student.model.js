@@ -40,12 +40,12 @@ const studentSchema = new Schema(
     },
     studentPan: {
       type: String,
-      unique: true,
-      require: true, // Allows unique constraint on optional fields
+      // unique: [true, "student PAN must be unique"],
+      required: [true, "PAN is required"], // Allows unique constraint on optional fields
     },
     aadharId: {
       type: String,
-      unique: true,
+      // unique: [true, "Student Aadhar ID must be unique"],
       required: [true, "Aadhar ID is required while registering a student"],
     },
     motherAadhar: {
@@ -63,12 +63,12 @@ const studentSchema = new Schema(
     phoneNumber: {
       type: String,
       required: [true, "Phone number is required"],
-      unique: true,
+      // unique: [true, "Phone number must be unique"],
     },
     whatsappNumber: {
       type: String,
       required: [true, "WhatsApp number is required"],
-      unique: true,
+      // unique: [true, "WhatsApp number must be unique"],
     },
     studentClass: {
       type: Schema.Types.ObjectId,
@@ -80,7 +80,10 @@ const studentSchema = new Schema(
     subjects: [{ type: Schema.Types.ObjectId, ref: "Subject" }],
     parentContact: {
       type: String,
-      required: [true, "Parent contact is required while registering a student"],
+      required: [
+        true,
+        "Parent contact is required while registering a student",
+      ],
     },
     parentName: {
       type: String,

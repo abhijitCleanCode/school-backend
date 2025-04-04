@@ -12,6 +12,8 @@ import {
 import { Exam } from "../models/exam.model.js";
 import { Expense } from "../models/expenses.model.js";
 import { TeachersLeave } from "../models/teacherLeave.model.js";
+import { PaymentRecord } from "../models/paymentRecord.model.js";
+import { Teacher } from "../models/teacher.model.js";
 
 const generateTokens = (principal) => {
   const accessToken = jwt.sign(
@@ -105,10 +107,110 @@ export const LOGIN_PRINCIPAL = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+export const GET_ALL_PAYMENT_REQUESTS= async(req, res)=>{
+  try {
+    const paymentrequesr=  await PaymentRecord.find({advancePay:true})
+    res.status(200).json({paymentrequesr, message:"Payment requests fetched succesfully"})
+
+    
+  } catch (error) {
+    res.status(500).json({message:"Internal Sever Error", error})
+  }
+}
+export const APPROVE_OR_REJECT_PAYMENT_REQUEST = async (req, res) => {
+  try {
+    const { Id, status } = req.body;
+
+    // Validate required fields
+    if (!Id || !status) {
+      return res.status(400).json({
+        success: false,
+        message: "Teacher ID and status are required",
+      });
+    }
+
+    // Ensure status is either 'approved' or 'rejected'
+    if (!["approved", "rejected"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Allowed values: 'approved' or 'rejected'",
+      });
+    }
+
+    // Find the most recent pending advance payment request
+    const request = await PaymentRecord.findOne({
+      teacher: Id,
+      advanceStatus: "pending",
+    });
+
+    if (!request) {
+      return res.status(404).json({
+        success: false,
+        message: "No pending advance pay request found for this teacher",
+      });
+    }
+
+    // Update the status and approval date if approved
+    request.advanceStatus = status;
+    request.advanceApprovalDate = status === "approved" ? new Date() : null;
+    await request.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Advance pay request has been ${status}`,
+      data: request,
+    });
+
+  } catch (error) {
+    console.error(" Error updating advance pay status:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while updating advance pay request",
+      error: error.message,
+    });
+  }
+};
+export const GET_TEACHER_EXPENSE = async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+
+    if (!teacherId) {
+      throw new ApiError(400, "Teacher ID is required");
+    }
+
+   
+    const numberOfCl = await TeachersLeave.countDocuments({ teacherId: teacherId });
+
+    const expense = await PaymentRecord.find({ teacher: teacherId }).lean();
+
+    
+    const teacher = await Teacher.findOne({ _id: teacherId }).select("salary").lean();
+
+    if (!teacher) {
+      return res.status(404).json(new ApiError(404, "Teacher not found"));
+    }
+
+    return res.status(200).json(
+      new ApiResponse(200, 
+        {
+          numberOfLeaves: numberOfCl,
+          expenses: expense,
+          salaryAmount: teacher.salary,
+        }, 
+        "Teacher expense fetched successfully"
+      )
+    );
+  } catch (error) {
+    console.error(" Error fetching teacher expense:", error);
+    return res.status(error.code || 500).json(new ApiError(error.code || 500, error.message));
+  }
+};
+
+
 export const GET_ALL_TEACHERS_LEAVE = async (req, res) => {
   try {
     // Fetch all leave requests from the database
-    const allLeaves = await TeachersLeave.find();
+    const allLeaves = await TeachersLeave.find().populate("Teacher","name email")
 
     return res.status(200).json({
       success: true,
@@ -148,8 +250,8 @@ export const ACCEPT_OR_REJECT_TEACHERS_LEAVE = async (req, res) => {
     }
 
     // Find and update the leave request
-    const updatedLeave = await mongoose.model("TeacherLeave").findByIdAndUpdate(
-      id,
+    const updatedLeave = await mongoose.model("TeacherLeave").findOneAndUpdate(
+      {teacherId:id},
       { leaveStatus },
       { new: true, runValidators: true }
     );

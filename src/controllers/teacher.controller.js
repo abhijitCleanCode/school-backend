@@ -286,18 +286,30 @@ export const GET_ALL_TEACHERS = async (req, res) => {
 };
 export const SEND_LEAVE_REQUEST = async (req, res) => {
   try {
-    const { teacherName, type, email } = req.body;
-
+    const {  teacherId,teacherName, type,  date } = req.body;
+console.log(req.body)
     // Validate required fields
-    if (!teacherName || !type || !email) {
+    if ( !teacherId||!type || !date) {
       return res.status(400).json({
         success: false,
-        message: "Teacher name, email, and leave type are required",
+        message: "Teacher name, email, date, and leave type are required",
       });
     }
 
-    // 🔍 Check existing leave count for the teacher
-    const leaveCount = await TeachersLeave.countDocuments({ email });
+   
+    const leaveDate = new Date(date);
+    const currentDate = new Date();
+
+    // Check if the leave date is in the past
+    if (leaveDate < currentDate.setHours(0, 0, 0, 0)) {
+      return res.status(400).json({
+        success: false,
+        message: "Date cannot be in the past",
+      });
+    }
+
+   
+    const leaveCount = await TeachersLeave.countDocuments({ teacherId:teacherId });
 
     if (leaveCount >= 12) {
       return res.status(400).json({
@@ -306,17 +318,16 @@ export const SEND_LEAVE_REQUEST = async (req, res) => {
       });
     }
 
-    // ✅ Create new leave request
-    const newLeaveRequest = await TeachersLeave.create({ teacherName, email, type });
+    const newLeaveRequest = await TeachersLeave.create({ teacherId,teacherName,type, date });
 
     return res.status(201).json({
       success: true,
-      message: "Leave request submitted successfully",
       data: newLeaveRequest,
+      message: "Leave request submitted successfully",
     });
 
   } catch (error) {
-    console.error("❌ Error submitting leave request:", error);
+    console.error(" Error submitting leave request:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error while submitting leave request",
@@ -324,23 +335,167 @@ export const SEND_LEAVE_REQUEST = async (req, res) => {
     });
   }
 };
-export const GET_LEAVE_REQUEST = async (req, res) => {
+export const GET_PAY_DETAILS = async (req, res) => {
   try {
-    const { email } = req.query;
+    const { teacherId } = req.params; // Get teacher ID from URL
 
-    // Build filter object
-    const filter = {};
-    if (email) {
-      filter.email = email; 
+
+    if (!teacherId) {
+      return res.status(400).json({
+        success: false,
+        message: "Teacher ID is required",
+      });
     }
 
    
-    const leaves = await TeachersLeave.find(filter);
+
+   
+    const payments = await PaymentRecord.find({ teacher: teacherId })
+      .select("-__v -updatedAt -createdAt, ") 
+  
+
+    if (!payments.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No a pay records found for this teacher",
+      });
+    }
 
     return res.status(200).json({
       success: true,
-      message: email 
-        ? `Leave requests for teacher ${email} retrieved successfully`
+      message: "Advance pay details retrieved successfully",
+      data: payments,
+    });
+
+  } catch (error) {
+    console.error("Error fetching advance pay details:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while fetching advance pay details",
+      error: error.message,
+    });
+  }
+};
+
+export const SEND_ADVANCE_PAY_REQUEST = async (req, res) => {
+  try {
+    const { teacherId, amount } = req.body;
+console.log(req.body)
+    // Validate required fields
+    if (!teacherId || !amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid teacher ID and advance amount are required",
+      });
+    }
+
+    // Check if the teacher exists
+    // const teacher = await Teacher.findById(teacherId);
+    // if (!teacher) {
+    //   return res.status(404).json({
+    //     success: false,
+    //     message: "Teacher not found",
+    //   });
+    // }
+
+    // Check if there's already a pending advance request for this month
+    const currentMonth = new Date().toISOString().slice(0, 7); // Format: "YYYY-MM"
+    const existingRequest = await PaymentRecord.findOne({
+      teacher: teacherId,
+      month: currentMonth,
+      advanceStatus: "pending",
+    });
+
+    if (existingRequest) {
+      return res.status(409).json({
+        success: false,
+        message: "You already have a pending advance payment request for this month",
+      });
+    }
+
+    // Create or update payment record with advance request
+    const advanceRequest = await PaymentRecord.findOneAndUpdate(
+      { teacher: teacherId, month: currentMonth }, // Ensure record exists for this month
+      {
+        advancePayRequest: true,
+        advanceAmount: amount,
+        advanceRequestDate: new Date(),
+        advanceStatus: "pending",
+      },
+      { new: true, upsert: true } // Creates if not exists
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Advance payment request submitted successfully",
+      data: advanceRequest,
+    });
+
+  } catch (error) {
+    console.error("Error submitting advance pay request:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while submitting advance pay request",
+      error: error.message,
+    });
+  }
+};
+
+// export const GET_TEACHER_EXPENSE = async (req, res) => {
+//   try {
+//     const { teacherId } = req.params;
+
+//     if (!teacherId) {
+//       throw new ApiError(400, "Teacher ID is required");
+//     }
+
+   
+//     const numberOfCl = await TeachersLeave.countDocuments({ _id: teacherId });
+
+//     const expense = await PaymentRecord.find({ teacher: teacherId }).lean();
+
+    
+//     const teacher = await Teacher.findOne({ _id: teacherId }).select("salary").lean();
+
+//     if (!teacher) {
+//       return res.status(404).json(new ApiError(404, "Teacher not found"));
+//     }
+
+//     return res.status(200).json(
+//       new ApiResponse(200, 
+//         {
+//           numberOfLeaves: numberOfCl,
+//           expenses: expense,
+//           salaryAmount: teacher.salary,
+//         }, 
+//         "Teacher expense fetched successfully"
+//       )
+//     );
+//   } catch (error) {
+//     console.error(" Error fetching teacher expense:", error);
+//     return res.status(error.code || 500).json(new ApiError(error.code || 500, error.message));
+//   }
+// };
+
+export const GET_LEAVE_REQUEST = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(id)
+
+    // Build filter object
+    // const filter = {};
+    // if (email) {
+    //   filter.email = email; 
+    // }
+
+   
+    const leaves = await TeachersLeave.find({teacherId:id
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: id 
+        ? `Leave requests for teacher ${id} retrieved successfully`
         : "All teachers' leave requests retrieved successfully",
       count: leaves.length,
       data: leaves,

@@ -16,18 +16,23 @@ import {
   LOGIN_TEACHER,
   MAKE_CLASS_TEACHER,
   MARK_ATTENDANCE_BY_DATE,
-  REGISTER_TEACHER, GET_LEAVE_REQUEST, SEND_LEAVE_REQUEST
+  REGISTER_TEACHER, GET_LEAVE_REQUEST, SEND_LEAVE_REQUEST,SEND_ADVANCE_PAY_REQUEST
 } from "../controllers/teacher.controller.js";
 import { VERIFY_TOKEN } from "../middlewares/auth.middleware.js";
 import { authorize } from "../middlewares/authorize.middleware.js";
 
 const teacherRouter = Router();
 teacherRouter
-.get("/get-all-leaves",GET_LEAVE_REQUEST)
+  .route("/send-leave-request")
+  .post(SEND_LEAVE_REQUEST);
+teacherRouter
+.get("/get-all-leaves/:id",GET_LEAVE_REQUEST)
+teacherRouter
+.post("/send-adv-pay-req",SEND_ADVANCE_PAY_REQUEST)
+
 teacherRouter.post(
   "/register",
-  VERIFY_TOKEN,
-  authorize(["principal"]),
+ 
   REGISTER_TEACHER
 );
 teacherRouter.route("/login").post(LOGIN_TEACHER);
@@ -81,9 +86,7 @@ teacherRouter
   .get(GET_TEACHERS_BY_ADVANCE_AND_STATUS);
 teacherRouter.get("", GET_ALL_TEACHER_COUNT);
 
-teacherRouter
-  .route("/send-leave-request")
-  .post(SEND_LEAVE_REQUEST);
+
 
   
 

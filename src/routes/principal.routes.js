@@ -8,7 +8,7 @@ import {
   GET_ALL_EXPENSES,
   LOGIN_PRINCIPAL,
   REGISTER_PRINCIPAL,
-  UPLOAD_EXAM_TIME_TABLE, GET_ALL_TEACHERS_LEAVE, ACCEPT_OR_REJECT_TEACHERS_LEAVE
+  UPLOAD_EXAM_TIME_TABLE, GET_ALL_TEACHERS_LEAVE, ACCEPT_OR_REJECT_TEACHERS_LEAVE, GET_ALL_PAYMENT_REQUESTS, GET_TEACHER_EXPENSE,APPROVE_OR_REJECT_PAYMENT_REQUEST
 } from "../controllers/principal.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { VERIFY_TOKEN } from "../middlewares/auth.middleware.js";
@@ -22,6 +22,12 @@ principalRouter.post("/login", LOGIN_PRINCIPAL);
 principalRouter
   .route("/create-exam")
   .post(VERIFY_TOKEN, authorize(["principal"]), CREATE_EXAM);
+  principalRouter
+  .route("/get-teacher-expense/:teacherId")
+  .get( GET_TEACHER_EXPENSE);
+  principalRouter
+  .route("/accept-reject-teacher-payRequest")
+  .post( APPROVE_OR_REJECT_PAYMENT_REQUEST);
 principalRouter
   .route("/upload-exam-timetable/:examId")
   .post(

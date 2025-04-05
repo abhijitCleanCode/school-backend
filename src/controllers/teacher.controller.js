@@ -379,30 +379,24 @@ export const GET_PAY_DETAILS = async (req, res) => {
 
 export const SEND_ADVANCE_PAY_REQUEST = async (req, res) => {
   try {
-    const { teacherId, amount } = req.body;
-console.log(req.body)
+    const { teacherId, amount, date } = req.body;
+    console.log(req.body);
+
     // Validate required fields
-    if (!teacherId || !amount || amount <= 0) {
+    if (!teacherId || !amount || amount <= 0 || !date) {
       return res.status(400).json({
         success: false,
-        message: "Valid teacher ID and advance amount are required",
+        message: "Valid teacher ID, amount, and date are required",
       });
     }
 
-    // Check if the teacher exists
-    // const teacher = await Teacher.findById(teacherId);
-    // if (!teacher) {
-    //   return res.status(404).json({
-    //     success: false,
-    //     message: "Teacher not found",
-    //   });
-    // }
+    const requestDate = new Date(date);
+    const month = requestDate.toISOString().slice(0, 7); // Format: "YYYY-MM"
 
-    // Check if there's already a pending advance request for this month
-    const currentMonth = new Date().toISOString().slice(0, 7); // Format: "YYYY-MM"
+    // Check for existing pending request for this teacher and month
     const existingRequest = await PaymentRecord.findOne({
       teacher: teacherId,
-      month: currentMonth,
+      month,
       advanceStatus: "pending",
     });
 
@@ -413,16 +407,22 @@ console.log(req.body)
       });
     }
 
-    // Create or update payment record with advance request
+    // Create or update payment record
     const advanceRequest = await PaymentRecord.findOneAndUpdate(
-      { teacher: teacherId, month: currentMonth }, // Ensure record exists for this month
+      { teacher: teacherId, month }, // Search criteria
       {
+        teacher: teacherId,
+        month,
         advancePayRequest: true,
         advanceAmount: amount,
-        advanceRequestDate: new Date(),
+        advanceRequestDate: requestDate,
         advanceStatus: "pending",
       },
-      { new: true, upsert: true } // Creates if not exists
+      {
+        upsert: true,     // Create if not exists
+        new: true,        // Return the new doc
+        setDefaultsOnInsert: true,
+      }
     );
 
     return res.status(201).json({
@@ -440,6 +440,7 @@ console.log(req.body)
     });
   }
 };
+
 
 // export const GET_TEACHER_EXPENSE = async (req, res) => {
 //   try {

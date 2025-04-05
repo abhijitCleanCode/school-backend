@@ -120,8 +120,23 @@ export const REGISTER_STUDENT = async (req, res) => {
       );
   } catch (error) {
     // Abort the transaction in case of an error
-    await session.abortTransaction();
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     session.endSession();
+
+    // mongodb duplicate key error code is 11000, but http status code range is in between [1xx, 5xx]. Thus we need to handle it separately
+    if (error.code === 11000) {
+      let message = "Duplicate key error";
+      if (error.keyValue) {
+        const field = Object.keys(error.keyValue)[0];
+        message = `Duplicate key error: A student with this ${field} already exists`;
+      }
+      res.status(409).json({
+        success: false,
+        message,
+      });
+    }
 
     res.status(error.code || 500).json({
       success: false,
@@ -525,31 +540,191 @@ export const UPDATE_STUDENT = async (req, res) => {
 };
 
 //* accounting - fee management
+// export const MARK_FEE_PAYMENT_STATUS = async (req, res) => {
+//   const { student, month, status } = req.body;
+
+//   try {
+//     const studentExists = await Student.findById(student);
+//     if (!studentExists) {
+//       throw new ApiError(404, "Student not found.");
+//     }
+
+//     const feePayment = await FeePayment.findOneAndUpdate(
+//       { student, month },
+//       { status },
+//       { upsert: true, new: true }
+//     );
+
+//     return res
+//       .status(200)
+//       .json(
+//         new ApiResponse(
+//           200,
+//           feePayment,
+//           "Fee payment status updated successfully."
+//         )
+//       );
+//   } catch (error) {
+//     res.status(error.code || 500).json({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
+
 export const MARK_FEE_PAYMENT_STATUS = async (req, res) => {
-  const { student, month, status } = req.body;
+  const { student, months, status, isAdvancePayment } = req.body;
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
-    const studentExists = await Student.findById(student);
+    const studentExists = await Student.findById(student).session(session);
     if (!studentExists) {
       throw new ApiError(404, "Student not found.");
     }
 
-    const feePayment = await FeePayment.findOneAndUpdate(
-      { student, month },
-      { status },
-      { upsert: true, new: true }
-    );
+    // fetch student class to get fee info
+    const studentClass = await StudentAcademicClass.findById(
+      studentExists.studentClass
+    ).session(session);
+    if (!studentClass) {
+      throw new ApiError(404, "Student class not found.");
+    }
 
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(
-          200,
-          feePayment,
-          "Fee payment status updated successfully."
-        )
+    const baseFeeAmount = studentClass.fee || 0;
+    const lateFineAmount = studentClass.lateFineAmount || 0;
+
+    // let's handle bulk payment
+    if (Array.isArray(months)) {
+      const bulkUpdateOps = [];
+      const currentDate = new Date();
+      const currentMonth = currentDate.toLocaleString("default", {
+        month: "long",
+      });
+      const currentYear = currentDate.getFullYear();
+
+      for (const month of months) {
+        // preparing an update obj - to insert or update a payment record
+        const updateObj = {
+          // $set - update existing field in the document or set a field
+          $set: {
+            status,
+            paymentDate: currentDate,
+            lateFine: false, // no longer fine after payment
+          },
+          // set field while inserting a new record
+          $setOnInsert: {
+            student,
+            month,
+            baseAmount: baseFeeAmount,
+          },
+        };
+
+        // existing records with late fine, add new field finepaid
+        updateObj.$set.finePaid = true;
+
+        // handling advance payment - month will be in future
+        if (isAdvancePayment) {
+          updateObj.$set.isAdvancePayment = true;
+        }
+
+        // batch update operation
+        bulkUpdateOps.push({
+          updateOne: {
+            filter: { student, month },
+            update: updateObj,
+            upsert: true,
+          },
+        });
+      }
+
+      const bulkWriteResults = await FeePayment.bulkWrite(bulkUpdateOps, {
+        session,
+      });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            bulkWriteResults,
+            "Bulk fee payment status updated sucessfully"
+          )
+        );
+    } else if (typeof months === "string") {
+      const month = months;
+      const currentDate = new Date();
+
+      const isFutureMonth =
+        isAdvancePayment ||
+        new Date(`${month} 1, ${currentDate.getFullYear()}`) > currentDate;
+
+      const updateObj = {
+        $set: {
+          status,
+          paymentDate: currentDate,
+          lateFine: false,
+        },
+        $setOnInsert: {
+          student,
+          month,
+          baseAmount: baseFeeAmount,
+        },
+      };
+
+      if (status === "paid") {
+        updateObj.$set.finePaid = true;
+      }
+
+      if (isFutureMonth) {
+        updateObj.$set.isAdvancePayment = true;
+      }
+
+      const feePayment = await FeePayment.findOneAndUpdate(
+        { student, month },
+        updateObj,
+        { upsert: true, new: true, session }
       );
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            feePayment,
+            "Fee payment status updated successfully."
+          )
+        );
+    } else {
+      throw new ApiError(400, "Months must be a string or an array");
+    }
   } catch (error) {
+    // Abort the transaction in case of an error
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
+    session.endSession();
+
+    // mongodb duplicate key error code is 11000, but http status code range is in between [1xx, 5xx]. Thus we need to handle it separately
+    if (error.code === 11000) {
+      let message = "Duplicate key error";
+      if (error.keyValue) {
+        const field = Object.keys(error.keyValue)[0];
+        message = `Duplicate key error: A student with this ${field} already exists`;
+      }
+      res.status(409).json({
+        success: false,
+        message,
+      });
+    }
+
     res.status(error.code || 500).json({
       success: false,
       message: error.message,
@@ -557,25 +732,7 @@ export const MARK_FEE_PAYMENT_STATUS = async (req, res) => {
   }
 };
 
-// export const IMPOSE_LATE_FINE = async (req, res) => {
-//   const session = mongoose.startSession();
-
-//   try {
-//     (await session).withTransaction(async () => {
-//       const { student: id } = req.params;
-//       const { lateFineAmount } = req.body;
-
-//       if (!isValidObjectId(id)) {
-//         throw new ApiError(400, "Invalid student ID");
-//       }
-
-//       if (typeof lateFineAmount !== "number" || lateFineAmount < 0) {
-//         throw new ApiError(400, "Late fee amount must be a positive number");
-//       }
-//     });
-//   } catch (error) {}
-// };
-
+// this api imposes late fine by individual month and student
 export const IMPOSE_LATE_FINE = async (req, res, next) => {
   const { studentId, month } = req.body;
 
@@ -588,62 +745,115 @@ export const IMPOSE_LATE_FINE = async (req, res, next) => {
 
   try {
     // Fetch student and their associated class details
-    const student = await Student.findById(studentId).populate("studentClass");
+    const student = await Student.findById(studentId)
+      .populate("studentClass")
+      .session(session);
     if (!student || !student.studentClass) {
       throw new ApiError(404, "Student or associated class not found");
     }
-    console.log("student: ", student);
+
     const studentClass = await StudentAcademicClass.findById(
       student.studentClass._id
-    );
-    console.log("studentClass: ", studentClass);
+    ).session(session);
 
-    const classFee = studentClass.fee || 1000;
-    const lateFine = studentClass.lateFineAmount || 500;
-
-    console.log("classFee: ", classFee);
-    console.log("lateFine: ", lateFine);
+    const classFee = studentClass?.fee ?? 1000;
+    const lateFine = studentClass?.lateFineAmount ?? 500;
 
     if (classFee === undefined || lateFine === undefined) {
       throw new ApiError(400, "Class fee or late fine amount is missing");
     }
 
-    // Find or create payment record
-    let payment = await FeePayment.findOneAndUpdate(
-      { student: studentId, month },
-      {
-        $setOnInsert: {
-          baseAmount: classFee,
-          status: "not paid",
-          lateFine: true, // Marking that late fine was applied
-        },
-        $inc: { lateFineAmount: lateFine },
+    // Check if payment record already exists
+    const existingPayment = await FeePayment.findOne({
+      student: studentId,
+      month,
+    }).session(session);
+
+    // Prevent duplicate fines if payment is already marked as paid
+    if (existingPayment?.status === "paid") {
+      throw new ApiError(400, "Cannot impose fine on already paid fee");
+    }
+
+    // Build update object without conflicts
+    const updateObj = {
+      $setOnInsert: {
+        student: studentId,
+        month,
+        // year,
+        status: "not paid",
+        baseAmount: classFee,
+        isAdvancePayment: false,
+        // notes: notes || `Late fine imposed on ${new Date().toISOString()}`,
       },
+      $set: {
+        lateFine: true,
+      },
+      $inc: {
+        lateFineAmount: existingPayment?.lateFineAmount ? 0 : lateFine,
+      },
+    };
+    // Only set finePaid if it's not already false in existing document
+    if (!existingPayment || existingPayment.finePaid !== false) {
+      updateObj.$set.finePaid = false;
+    }
+    // Find or create payment record with fine
+    const payment = await FeePayment.findOneAndUpdate(
+      {
+        student: studentId,
+        month,
+      },
+      updateObj,
       {
         upsert: true,
         new: true,
         session,
+        runValidators: true,
       }
     );
-    console.log("payment: ", payment);
+
+    if (!payment) {
+      throw new ApiError(500, "Failed to create/update payment record");
+    }
+
+    const createdPayment = await FeePayment.findById(payment._id)
+      .populate("student", "name")
+      .session(session)
+      .lean();
 
     // Ensure totalAmount is correctly updated
-    payment.totalAmount = payment.baseAmount + (payment.lateFineAmount || 0);
-    await payment.save({ session });
+    // payment.totalAmount = payment.baseAmount + (payment.lateFineAmount || 0);
+    // await payment.save({ session });
 
     await session.commitTransaction();
     session.endSession();
 
-    return res.status(200).json({
-      success: true,
-      message: "Late fine imposed successfully",
-      payment,
-    });
+    return res
+      .status(200)
+      .json(new ApiResponse(200, createdPayment, "Fine imposed Successfully"));
   } catch (error) {
-    await session.abortTransaction();
+    // Abort the transaction in case of an error
+    if (session.inTransaction()) {
+      await session.abortTransaction();
+    }
     session.endSession();
-    console.error("Error imposing late fine:", error.message);
-    return next(error);
+
+    // mongodb duplicate key error code is 11000, but http status code range is in between [1xx, 5xx]. Thus we need to handle it separately
+    if (error.code === 11000) {
+      let message = "Duplicate key error";
+      if (error.keyValue) {
+        const field = Object.keys(error.keyValue)[0];
+        message = `Duplicate key error: A student with this ${field} already exists`;
+      }
+      res.status(409).json({
+        success: false,
+        message,
+      });
+    }
+
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -732,9 +942,7 @@ export const GET_FEE_PAYMENT_HISTORY_BY_STUDENT = async (req, res) => {
       filter.month = month; // Filter by month if provided
     }
 
-    const feePayments = await FeePayment.find(filter).select(
-      "month status paidBy createdAt"
-    );
+    const feePayments = await FeePayment.find(filter);
 
     res
       .status(200)

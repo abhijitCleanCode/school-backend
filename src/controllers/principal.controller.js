@@ -14,6 +14,7 @@ import { Expense } from "../models/expenses.model.js";
 import { TeachersLeave } from "../models/teacherLeave.model.js";
 import { PaymentRecord } from "../models/paymentRecord.model.js";
 import { Teacher } from "../models/teacher.model.js";
+import { TeacherAttendance } from "../models/teacherAttendance.model.js";
 
 const generateTokens = (principal) => {
   const accessToken = jwt.sign(
@@ -117,68 +118,143 @@ export const GET_ALL_PAYMENT_REQUESTS= async(req, res)=>{
     res.status(500).json({message:"Internal Sever Error", error})
   }
 }
-export const APPROVE_OR_REJECT_PAYMENT_REQUEST = async (req, res) => {
+
+export const UPDATE_PAYMENT_STATUS = async (req, res) => {
   try {
-    const { Id, status } = req.body;
+    const { type } = req.query;
+    const { Id, Salarystatus, AdvStatus } = req.body;
 
     // Validate required fields
-    if (!Id || !status) {
+    if (!Id || !type) {
       return res.status(400).json({
         success: false,
-        message: "Teacher ID and status are required",
+        message: "Teacher ID and type are required",
       });
     }
 
-    // Ensure status is either 'approved' or 'rejected'
-    if (!["approved", "rejected"].includes(status)) {
+    // Validate types and statuses
+    if (type === "adv") {
+      if (!AdvStatus) {
+        return res.status(400).json({
+          success: false,
+          message: "Advance status is required for type 'adv'",
+        });
+      }
+      if (!["approved", "rejected"].includes(AdvStatus)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid advance status. Allowed values: 'approved' or 'rejected'",
+        });
+      }
+    } else if (type === "salary") {
+      if (!Salarystatus) {
+        return res.status(400).json({
+          success: false,
+          message: "Salary status is required for type 'salary'",
+        });
+      }
+      if (!["paid", "unpaid"].includes(Salarystatus)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid salary status. Allowed values: 'approved' or 'rejected'",
+        });
+      }
+    } else if (type === "both") {
+      if (!AdvStatus || !Salarystatus) {
+        return res.status(400).json({
+          success: false,
+          message: "Both Advance and Salary status are required for type 'both'",
+        });
+      }
+      if (
+        !["approved", "rejected"].includes(AdvStatus) ||
+        !["paid", "unpaid"].includes(Salarystatus)
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid statuses. Allowed values: 'approved' or 'rejected'",
+        });
+      }
+    } else {
       return res.status(400).json({
         success: false,
-        message: "Invalid status. Allowed values: 'approved' or 'rejected'",
+        message: "Invalid type. Allowed values: 'adv', 'salary', or 'both'",
       });
     }
 
-    // Find the most recent pending advance payment request
+    // Find the most recent relevant payment record
     const request = await PaymentRecord.findOne({
       teacher: Id,
-      advanceStatus: "pending",
     });
 
     if (!request) {
       return res.status(404).json({
         success: false,
-        message: "No pending advance pay request found for this teacher",
+        message: "No payment record found for this teacher",
       });
     }
 
-    // Update the status and approval date if approved
-    request.advanceStatus = status;
-    request.advanceApprovalDate = status === "approved" ? new Date() : null;
+    // Update based on type
+    if (type === "adv") {
+      request.advanceStatus = AdvStatus;
+      request.advanceApprovalDate = AdvStatus === "approved" ? new Date() : null;
+   
+      request.salaryApprovalDate = null;
+    }
+
+    if (type === "salary") {
+      request.status = Salarystatus;
+     
+    }
+
+    if (type === "both") {
+      request.advanceStatus = AdvStatus;
+      request.advanceApprovalDate = AdvStatus === "approved" ? new Date() : null;
+      request.status = Salarystatus;
+     
+    }
+
     await request.save();
 
     return res.status(200).json({
       success: true,
-      message: `Advance pay request has been ${status}`,
+      message: `Payment status (${type}) has been updated`,
       data: request,
     });
 
   } catch (error) {
-    console.error(" Error updating advance pay status:", error);
+    console.error("Error updating payment status:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal server error while updating advance pay request",
+      message: "Internal server error while updating payment request",
       error: error.message,
     });
   }
 };
+
+
 export const GET_TEACHER_EXPENSE = async (req, res) => {
   try {
-    const { teacherId } = req.params;
-
-    if (!teacherId) {
-      throw new ApiError(400, "Teacher ID is required");
+    const { teacherId,month } = req.params;
+    if (!teacherId || !month) {
+      throw new ApiError(400, "Teacher ID and month are required");
     }
 
-   
+    const monthDate = new Date(month);
+    const monthNumber = monthDate.getMonth() + 1; // JS months are 0-indexed
+    const yearNumber = monthDate.getFullYear();
+
+    // Count absent days in the given month
+    const absentCount = await TeacherAttendance.countDocuments({
+      teacher: teacherId,
+      status: "absent",
+      $expr: {
+        $and: [
+          { $eq: [{ $month: "$date" }, monthNumber] },
+          { $eq: [{ $year: "$date" }, yearNumber] }
+        ]
+      }
+    });
     const numberOfCl = await TeachersLeave.countDocuments({ teacherId: teacherId });
 
     const expense = await PaymentRecord.find({ teacher: teacherId }).lean();
@@ -193,6 +269,7 @@ export const GET_TEACHER_EXPENSE = async (req, res) => {
     return res.status(200).json(
       new ApiResponse(200, 
         {
+          numberOfAbsent:absentCount,
           numberOfLeaves: numberOfCl,
           expenses: expense,
           salaryAmount: teacher.salary,

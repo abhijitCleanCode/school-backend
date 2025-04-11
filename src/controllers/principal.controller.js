@@ -15,6 +15,7 @@ import { TeachersLeave } from "../models/teacherLeave.model.js";
 import { PaymentRecord } from "../models/paymentRecord.model.js";
 import { Teacher } from "../models/teacher.model.js";
 import { TeacherAttendance } from "../models/teacherAttendance.model.js";
+import { Student } from "../models/student.model.js";
 
 const generateTokens = (principal) => {
   const accessToken = jwt.sign(
@@ -283,6 +284,22 @@ export const GET_TEACHER_EXPENSE = async (req, res) => {
   }
 };
 
+export const DELETE_STUDENTS= async(req,res)=>{
+  try {
+    const {id}= req.body
+    console.log(id)
+    const student= await Student.findById({_id:id})
+    console.log(student)
+    if(!student){
+      return  res.status(404).json({success:true, message:"Student not found"})
+    }
+    await Student.findByIdAndDelete({_id:id})
+    return  res.status(200).json({success:true, message:"Student deleted Succesfully"})
+    
+  } catch (error) {
+    return res.status(500).json({success:false, message:"Internal server error while deleting student", error:error.message})
+  }
+}
 
 export const GET_ALL_TEACHERS_LEAVE = async (req, res) => {
   try {

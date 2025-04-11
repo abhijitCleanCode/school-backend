@@ -896,7 +896,7 @@ export const DELETE_ASSIGNED_SUBJECT_CLASSES = async (req, res) => {
     }
 
     // Find teacher and update assigned subjects & classes
-    const updatedTeacher = await Teacher.findByIdAndUpdate(
+    const updatedTeacher = await Teacher.findByIdAndDelete(
       teacherId,
       {
         $pull: {

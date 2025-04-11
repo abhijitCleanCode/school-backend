@@ -14,6 +14,7 @@ import { upload } from "../middlewares/multer.middleware.js";
 import { VERIFY_TOKEN } from "../middlewares/auth.middleware.js";
 import { authorize } from "../middlewares/authorize.middleware.js";
 import { CHANGE_PASSWORD } from "../controllers/principal.controller.js";
+import { DELETE_STUDENTS } from "../controllers/principal.controller.js";
 
 const principalRouter = Router();
 
@@ -25,6 +26,7 @@ principalRouter
   principalRouter
   .route("/get-payment-request")
   .get( GET_ALL_PAYMENT_REQUESTS);
+  principalRouter.route("/delete-students").delete(VERIFY_TOKEN,DELETE_STUDENTS)
   principalRouter
   .route("/get-teacher-expense/:teacherId/:month")
   .get( GET_TEACHER_EXPENSE);

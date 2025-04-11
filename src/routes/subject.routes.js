@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  GET_ALL_SUBJECTS,
   GET_SUBJECT_BY_CLASS,
   GET_SUBJECT_BY_ID,
   REGISTER_SUBJECT,
@@ -17,5 +18,6 @@ subjectRouter.post(
 );
 subjectRouter.get("/getsubjectsbyclass/:classId", GET_SUBJECT_BY_CLASS);
 subjectRouter.get("/getsubjectbyid/:subjectId", GET_SUBJECT_BY_ID);
+subjectRouter.get("/getAllSubjects", GET_ALL_SUBJECTS);
 
 export default subjectRouter;

@@ -146,4 +146,18 @@ export const GET_SUBJECT_BY_ID = async (req, res) => {
   }
 };
 
+export const GET_ALL_SUBJECTS = async (req, res) => {
+  try {
+    const subjects = await Subject.find()
+      .populate("class", "className section")
+      .populate("teacher", "name email");
+    res.status(200).json(subjects);
+  } catch (error) {
+    res.status(error.code || 500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // delete subject

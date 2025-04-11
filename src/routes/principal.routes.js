@@ -8,7 +8,7 @@ import {
   GET_ALL_EXPENSES,
   LOGIN_PRINCIPAL,
   REGISTER_PRINCIPAL,
-  UPLOAD_EXAM_TIME_TABLE, GET_ALL_TEACHERS_LEAVE, ACCEPT_OR_REJECT_TEACHERS_LEAVE, GET_ALL_PAYMENT_REQUESTS, GET_TEACHER_EXPENSE,UPDATE_PAYMENT_STATUS
+  UPLOAD_EXAM_TIME_TABLE, GET_ALL_TEACHERS_LEAVE, ACCEPT_OR_REJECT_TEACHERS_LEAVE, GET_ALL_PAYMENT_REQUESTS, GET_TEACHER_EXPENSE,UPDATE_PAYMENT_STATUS, DELETE_TEACHERS
 } from "../controllers/principal.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { VERIFY_TOKEN } from "../middlewares/auth.middleware.js";
@@ -27,6 +27,7 @@ principalRouter
   .route("/get-payment-request")
   .get( GET_ALL_PAYMENT_REQUESTS);
   principalRouter.route("/delete-students").delete(VERIFY_TOKEN,DELETE_STUDENTS)
+  principalRouter.route("/delete-teacher").delete(DELETE_TEACHERS)
   principalRouter
   .route("/get-teacher-expense/:teacherId/:month")
   .get( GET_TEACHER_EXPENSE);

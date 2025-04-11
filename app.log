@@ -347,3 +347,5 @@
 {"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"POST\",\"url\":\"/api/v1/teacher/send-adv-pay-req\",\"status\":\"201\",\"responseTime\":\"337.469\"}","timestamp":"2025-04-05T09:08:02.224Z"}
 {"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"POST\",\"url\":\"/api/v1/teacher/send-adv-pay-req\",\"status\":\"409\",\"responseTime\":\"90.901\"}","timestamp":"2025-04-05T09:09:24.833Z"}
 {"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/principal/get-teacher-expense/67eb7eeafa9de5f0dd6eefe5/2025-04-01%0A\",\"status\":\"200\",\"responseTime\":\"411.409\"}","timestamp":"2025-04-05T09:09:33.417Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/principal/get-teachers-leave\",\"status\":\"500\",\"responseTime\":\"86.416\"}","timestamp":"2025-04-11T13:46:03.913Z"}
+{"level":"\u001b[32minfo\u001b[39m","message":"{\"method\":\"GET\",\"url\":\"/api/v1/principal/get-teachers-leave\",\"status\":\"200\",\"responseTime\":\"76.617\"}","timestamp":"2025-04-11T13:47:00.477Z"}

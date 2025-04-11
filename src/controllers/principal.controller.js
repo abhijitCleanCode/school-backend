@@ -304,7 +304,7 @@ export const DELETE_STUDENTS= async(req,res)=>{
 export const GET_ALL_TEACHERS_LEAVE = async (req, res) => {
   try {
     // Fetch all leave requests from the database
-    const allLeaves = await TeachersLeave.find().populate("Teacher","name email")
+    const allLeaves = await TeachersLeave.find()
 
     return res.status(200).json({
       success: true,

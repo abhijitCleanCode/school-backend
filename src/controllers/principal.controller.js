@@ -16,6 +16,7 @@ import { PaymentRecord } from "../models/paymentRecord.model.js";
 import { Teacher } from "../models/teacher.model.js";
 import { TeacherAttendance } from "../models/teacherAttendance.model.js";
 import { Student } from "../models/student.model.js";
+import { Subject } from "../models/subject.model.js";
 
 const generateTokens = (principal) => {
   const accessToken = jwt.sign(
@@ -311,7 +312,9 @@ export const  DELETE_TEACHERS=async (req, res)=>{
       return  res.status(404).json({success:true, message:"Teacher  not found"})
     }
     await Teacher.findByIdAndDelete({_id:id})
-    return  res.status(200).json({success:true, message:"Teacher deleted Succesfully"})
+    await Subject.deleteMany({class:id})
+    await StudentAcademicClass.deleteMany({classTeacher:id})
+    return  res.status(200).json({success:true, message:"Teacher deleted Succesfully and its correcsponding details"})
     
   } catch (error) {
     return res.status(500).json({success:false, message:"Internal server error while deleting teacher", error:error.message})

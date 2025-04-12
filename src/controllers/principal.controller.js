@@ -312,7 +312,10 @@ export const  DELETE_TEACHERS=async (req, res)=>{
       return  res.status(404).json({success:true, message:"Teacher  not found"})
     }
     await Teacher.findByIdAndDelete({_id:id})
-    await Subject.deleteMany({class:id})
+    await Subject.updateMany(
+      { teachers: id }, 
+      { $pull: { teachers: id } }
+    );
     await StudentAcademicClass.deleteMany({classTeacher:id})
     return  res.status(200).json({success:true, message:"Teacher deleted Succesfully and its correcsponding details"})
     
